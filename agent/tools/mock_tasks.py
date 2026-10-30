@@ -1,0 +1,86 @@
+import uuid
+from typing import List, Dict, Any, Optional
+from agent.db.connection import DatabaseManager, db_manager
+from agent.tools.base import ITaskService, TaskItem
+
+
+class MockTaskAdapter(ITaskService):
+    def __init__(self, manager: DatabaseManager = db_manager):
+        self.manager = manager
+
+    def list_tasks(
+        self,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+    ) -> List[TaskItem]:
+        query = "SELECT * FROM mock_tasks WHERE 1=1"
+        params = []
+        if status:
+            query += " AND status = ?"
+            params.append(status)
+        if priority:
+            query += " AND priority = ?"
+            params.append(priority)
+        query += " ORDER BY due_date ASC;"
+
+        with self.manager.get_connection() as conn:
+            rows = conn.execute(query, params).fetchall()
+            return [self._row_to_model(r) for r in rows]
+
+    def create_task(
+        self,
+        title: str,
+        description: Optional[str] = None,
+        due_date: Optional[str] = None,
+        priority: str = "MEDIUM",
+        idempotency_key: str = "",
+    ) -> TaskItem:
+        task_id = f"task_{uuid.uuid4().hex[:8]}"
+        with self.manager.get_connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO mock_tasks 
+                (task_id, title, description, due_date, priority, status)
+                VALUES (?, ?, ?, ?, ?, 'PENDING');
+                """,
+                (task_id, title, description, due_date, priority),
+            )
+        return TaskItem(
+            task_id=task_id,
+            title=title,
+            description=description,
+            due_date=due_date,
+            priority=priority,
+            status="PENDING",
+        )
+
+    def complete_task(
+        self,
+        task_id: str,
+        idempotency_key: str = "",
+    ) -> Dict[str, Any]:
+        with self.manager.get_connection() as conn:
+            conn.execute(
+                "UPDATE mock_tasks SET status = 'COMPLETED' WHERE task_id = ?",
+                (task_id,),
+            )
+        return {
+            "task_id": task_id,
+            "status": "COMPLETED",
+            "completed": True,
+            # Compensating action to uncomplete / reopen task
+            "compensating_action": {
+                "tool_name": "reopen_task",
+                "parameters": {"task_id": task_id},
+            },
+        }
+
+    def _row_to_model(self, row) -> TaskItem:
+        return TaskItem(
+            task_id=row["task_id"],
+            title=row["title"],
+            description=row["description"],
+            due_date=row["due_date"],
+            priority=row["priority"],
+            status=row["status"],
+        )

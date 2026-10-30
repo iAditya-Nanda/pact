@@ -30,7 +30,7 @@ const AuthContext = createContext<AuthContextType>({
 
 const DEFAULT_TEST_USER: UserProfile = {
   id: "usr_aditya_nanda_01",
-  email: "aditya@example.com",
+  email: "adityananda.dev@gmail.com",
   fullName: "Aditya Nanda",
   avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces",
   role: "Founder & Lead Architect",

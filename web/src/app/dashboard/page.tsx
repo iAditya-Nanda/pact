@@ -27,7 +27,7 @@ export default function DashboardPage() {
 
   const displayName = user?.fullName || "Aditya Nanda";
   const displayRole = user?.role || "Lead Architect";
-  const displayEmail = user?.email || "aditya@example.com";
+  const displayEmail = user?.email || "adityananda.dev@gmail.com";
   const displayPreference =
     user?.schedulePreference || "Avoid meetings before 10:00 AM";
 

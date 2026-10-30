@@ -8,10 +8,10 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 export default function SignUpPage() {
   const { loginWithGoogle, isLoading } = useAuth();
   const [formData, setFormData] = useState({
-    fullName: "",
-    age: "",
-    role: "",
-    email: "",
+    fullName: "Aditya Nanda",
+    age: "24",
+    role: "Lead Architect",
+    email: "adityananda.dev@gmail.com",
     workingHours: "10:00 AM – 7:00 PM",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,7 +28,7 @@ export default function SignUpPage() {
   const handleGoogleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const email = formData.email || (formData.fullName ? `${formData.fullName.toLowerCase().replace(/\s+/g, ".")}@example.com` : "aditya@example.com");
+    const email = formData.email || "adityananda.dev@gmail.com";
     await loginWithGoogle(
       email,
       formData.fullName || "Aditya Nanda",

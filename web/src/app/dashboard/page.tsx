@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -50,14 +51,61 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const handleToggleTheme = () => {
+  const handleToggleTheme = (event?: React.MouseEvent<HTMLButtonElement>) => {
     const nextDark = !isDark;
-    setIsDark(nextDark);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("pact_theme", nextDark ? "dark" : "light");
-      document.documentElement.classList.toggle("dark", nextDark);
-      document.body.classList.toggle("dark", nextDark);
+
+    const applyTheme = () => {
+      setIsDark(nextDark);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pact_theme", nextDark ? "dark" : "light");
+        document.documentElement.classList.toggle("dark", nextDark);
+        document.body.classList.toggle("dark", nextDark);
+      }
+    };
+
+    const doc = typeof document !== "undefined" ? (document as any) : null;
+    const isAppearanceTransition =
+      doc &&
+      typeof doc.startViewTransition === "function" &&
+      typeof window !== "undefined" &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!isAppearanceTransition || !event) {
+      applyTheme();
+      return;
     }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX || rect.left + rect.width / 2;
+    const y = event.clientY || rect.top + rect.height / 2;
+
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = doc.startViewTransition(() => {
+      flushSync(() => {
+        applyTheme();
+      });
+    });
+
+    transition.ready.then(() => {
+      const clipPath = [
+        `circle(0px at ${x}px ${y}px)`,
+        `circle(${endRadius}px at ${x}px ${y}px)`,
+      ];
+      document.documentElement.animate(
+        {
+          clipPath: clipPath,
+        },
+        {
+          duration: 450,
+          easing: "ease-in-out",
+          pseudoElement: "::view-transition-new(root)",
+        }
+      );
+    });
   };
 
   const activeUser = user || localCache;

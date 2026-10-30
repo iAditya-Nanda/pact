@@ -8,11 +8,22 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 export default function LoginPage() {
   const { loginWithGoogle, isLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSignIn = async () => {
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       await loginWithGoogle();
+    } catch (err: any) {
+      console.error("Firebase Sign-In Error:", err);
+      if (err.code === "auth/popup-closed-by-user") {
+        setErrorMessage("Sign-in window closed before completing authentication. Please try again.");
+      } else if (err.code === "auth/unauthorized-domain") {
+        setErrorMessage("Domain not authorized in Firebase Console (Authentication > Settings > Authorized Domains).");
+      } else {
+        setErrorMessage(err.message || "Failed to complete Google Sign-In.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -54,6 +65,12 @@ export default function LoginPage() {
           <p className="text-sm text-[#444746] leading-relaxed mb-8">
             Access your autonomous executive workspace and active cross-app workflows.
           </p>
+
+          {errorMessage && (
+            <div className="mb-4 p-3 rounded-xl bg-[#ba1a1a]/10 border border-[#ba1a1a]/20 text-xs text-[#ba1a1a] text-left">
+              {errorMessage}
+            </div>
+          )}
 
           {/* Google Sign In CTA */}
           <button

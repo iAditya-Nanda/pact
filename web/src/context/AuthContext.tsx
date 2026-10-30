@@ -2,7 +2,19 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import {
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  User as FirebaseUser,
+} from "firebase/auth";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { auth, googleProvider, db } from "@/lib/firebase";
 
 export interface UserProfile {
   id: string;
@@ -12,6 +24,7 @@ export interface UserProfile {
   role: string;
   age?: number;
   schedulePreference?: string;
+  googleAccessToken?: string;
 }
 
 interface AuthContextType {
@@ -42,139 +55,125 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // Load active session from Supabase
+  // Listen to Firebase Auth state
   useEffect(() => {
-    async function loadSession() {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        try {
+          // Fetch synced profile from Cloud Firestore
+          const userDocRef = doc(db, "users", firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
 
-        if (session?.user) {
-          const u = session.user;
-          // Fetch profile details from backend
-          const res = await fetch("/api/workspace/overview");
-          if (res.ok) {
-            const data = await res.json();
-            setUser({
-              id: u.id,
-              email: u.email || "adityananda.dev@gmail.com",
-              fullName:
-                data.user?.full_name ||
-                u.user_metadata?.full_name ||
-                u.user_metadata?.name ||
-                "Aditya Nanda",
-              avatarUrl:
-                data.user?.avatar_url ||
-                u.user_metadata?.avatar_url ||
-                u.user_metadata?.picture ||
-                "",
-              role: data.user?.role || "Lead Architect",
-              age: data.user?.age || 24,
-              schedulePreference:
-                data.user?.schedule_preference ||
-                "Avoid meetings before 10:00 AM",
-            });
+          let profileData = userDoc.exists() ? userDoc.data() : null;
+
+          if (!profileData) {
+            // Initialize document in Firestore with Google Auth details
+            const initialDoc = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || "adityananda.dev@gmail.com",
+              fullName: firebaseUser.displayName || "Aditya Nanda",
+              avatarUrl: firebaseUser.photoURL || "",
+              role: "Lead Architect",
+              age: 24,
+              schedulePreference: "Avoid meetings before 10:00 AM",
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            };
+            await setDoc(userDocRef, initialDoc, { merge: true });
+            profileData = initialDoc;
           }
-        } else {
-          // Check local stored session for local development
-          const stored = localStorage.getItem("pact_auth_user");
-          if (stored) {
-            setUser(JSON.parse(stored));
-          }
+
+          const profile: UserProfile = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email || "adityananda.dev@gmail.com",
+            fullName: profileData.fullName || firebaseUser.displayName || "Aditya Nanda",
+            avatarUrl: profileData.avatarUrl || firebaseUser.photoURL || "",
+            role: profileData.role || "Lead Architect",
+            age: profileData.age || 24,
+            schedulePreference:
+              profileData.schedulePreference || "Avoid meetings before 10:00 AM",
+            googleAccessToken: localStorage.getItem("pact_google_access_token") || undefined,
+          };
+
+          setUser(profile);
+          localStorage.setItem("pact_auth_user", JSON.stringify(profile));
+        } catch (error) {
+          console.error("Firestore user profile retrieval error:", error);
+          // Fallback to Google Auth metadata directly
+          const fallbackProfile: UserProfile = {
+            id: firebaseUser.uid,
+            email: firebaseUser.email || "adityananda.dev@gmail.com",
+            fullName: firebaseUser.displayName || "Aditya Nanda",
+            avatarUrl: firebaseUser.photoURL || "",
+            role: "Lead Architect",
+            age: 24,
+            schedulePreference: "Avoid meetings before 10:00 AM",
+          };
+          setUser(fallbackProfile);
         }
-      } catch (err) {
-        console.error("Error loading session:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadSession();
-
-    // Listen to Supabase auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const u = session.user;
-        const profile: UserProfile = {
-          id: u.id,
-          email: u.email || "adityananda.dev@gmail.com",
-          fullName:
-            u.user_metadata?.full_name ||
-            u.user_metadata?.name ||
-            "Aditya Nanda",
-          avatarUrl:
-            u.user_metadata?.avatar_url ||
-            u.user_metadata?.picture ||
-            "",
-          role: "Lead Architect",
-          age: 24,
-          schedulePreference: "Avoid meetings before 10:00 AM",
-        };
-        setUser(profile);
-        localStorage.setItem("pact_auth_user", JSON.stringify(profile));
-      } else if (event === "SIGNED_OUT") {
+      } else {
         setUser(null);
         localStorage.removeItem("pact_auth_user");
+        localStorage.removeItem("pact_google_access_token");
       }
+      setIsLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
   const loginWithGoogle = async () => {
     setIsLoading(true);
-
     try {
-      // 1. Trigger real Google OAuth with offline access and required Google Workspace scopes
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          scopes:
-            "openid email profile https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks",
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
-        },
-      });
+      // Direct Google Sign In via Firebase popup with Google Workspace scopes
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = (await import("firebase/auth")).GoogleAuthProvider.credentialFromResult(result);
+      const token = credential?.accessToken;
 
-      if (error) {
-        console.warn("Supabase Google OAuth direct redirect fallback:", error.message);
-        // Seamless fallback for local dev if Supabase is stopped or client ID not added yet
-        const localUser: UserProfile = {
-          id: "usr_adityananda_dev",
-          email: "adityananda.dev@gmail.com",
-          fullName: "Aditya Nanda",
-          avatarUrl: "",
-          role: "Lead Architect",
-          age: 24,
-          schedulePreference: "Avoid meetings before 10:00 AM",
-        };
-        setUser(localUser);
-        localStorage.setItem("pact_auth_user", JSON.stringify(localUser));
-        router.push("/dashboard");
+      if (token) {
+        localStorage.setItem("pact_google_access_token", token);
       }
-    } catch (e) {
-      console.error("Sign-in exception:", e);
-      // Fallback to allow smooth development testing
-      const localUser: UserProfile = {
-        id: "usr_adityananda_dev",
-        email: "adityananda.dev@gmail.com",
-        fullName: "Aditya Nanda",
-        avatarUrl: "",
-        role: "Lead Architect",
-        age: 24,
-        schedulePreference: "Avoid meetings before 10:00 AM",
+
+      const fbUser = result.user;
+      const userDocRef = doc(db, "users", fbUser.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      const existingData = userDoc.exists() ? userDoc.data() : {};
+      const updatedProfile: UserProfile = {
+        id: fbUser.uid,
+        email: fbUser.email || "adityananda.dev@gmail.com",
+        fullName: existingData.fullName || fbUser.displayName || "Aditya Nanda",
+        avatarUrl: existingData.avatarUrl || fbUser.photoURL || "",
+        role: existingData.role || "Lead Architect",
+        age: existingData.age || 24,
+        schedulePreference:
+          existingData.schedulePreference || "Avoid meetings before 10:00 AM",
+        googleAccessToken: token || undefined,
       };
-      setUser(localUser);
-      localStorage.setItem("pact_auth_user", JSON.stringify(localUser));
+
+      // Persist to Firestore
+      await setDoc(
+        userDocRef,
+        {
+          uid: fbUser.uid,
+          email: fbUser.email || "adityananda.dev@gmail.com",
+          fullName: updatedProfile.fullName,
+          avatarUrl: updatedProfile.avatarUrl,
+          role: updatedProfile.role,
+          age: updatedProfile.age,
+          schedulePreference: updatedProfile.schedulePreference,
+          lastLoginAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      setUser(updatedProfile);
+      localStorage.setItem("pact_auth_user", JSON.stringify(updatedProfile));
       router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Firebase Google Sign-In error:", error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -186,47 +185,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     role: string;
     schedulePreference: string;
   }) => {
-    const updated: UserProfile = {
-      id: user?.id || "usr_adityananda_dev",
-      email: "adityananda.dev@gmail.com",
-      fullName: data.fullName,
-      avatarUrl: user?.avatarUrl || "",
-      role: data.role,
-      age: data.age,
-      schedulePreference: data.schedulePreference,
-    };
-
-    setUser(updated);
-    localStorage.setItem("pact_auth_user", JSON.stringify(updated));
-
-    // Save to database if session exists
+    setIsLoading(true);
     try {
-      if (user?.id) {
-        await supabase
-          .from("user_profiles")
-          .update({
-            full_name: data.fullName,
-            age: data.age,
-            role: data.role,
-            schedule_preference: data.schedulePreference,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", user.id);
-      }
-    } catch {
-      // Ignore if offline
-    }
+      // Trigger Google Sign-in to authenticate identity and acquire Google Workspace credentials
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = (await import("firebase/auth")).GoogleAuthProvider.credentialFromResult(result);
+      const token = credential?.accessToken;
 
-    router.push("/dashboard");
+      if (token) {
+        localStorage.setItem("pact_google_access_token", token);
+      }
+
+      const fbUser = result.user;
+      const userDocRef = doc(db, "users", fbUser.uid);
+
+      const profilePayload = {
+        uid: fbUser.uid,
+        email: fbUser.email || "adityananda.dev@gmail.com",
+        fullName: data.fullName || fbUser.displayName || "Aditya Nanda",
+        avatarUrl: fbUser.photoURL || "",
+        role: data.role || "Lead Architect",
+        age: data.age || 24,
+        schedulePreference: data.schedulePreference,
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      };
+
+      await setDoc(userDocRef, profilePayload, { merge: true });
+
+      const updatedUser: UserProfile = {
+        id: fbUser.uid,
+        email: fbUser.email || "adityananda.dev@gmail.com",
+        fullName: profilePayload.fullName,
+        avatarUrl: profilePayload.avatarUrl,
+        role: profilePayload.role,
+        age: profilePayload.age,
+        schedulePreference: profilePayload.schedulePreference,
+        googleAccessToken: token || undefined,
+      };
+
+      setUser(updatedUser);
+      localStorage.setItem("pact_auth_user", JSON.stringify(updatedUser));
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Firebase Profile Setup error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = async () => {
     localStorage.removeItem("pact_auth_user");
+    localStorage.removeItem("pact_google_access_token");
     setUser(null);
     try {
-      await supabase.auth.signOut();
-    } catch {
-      // Ignore if offline
+      await signOut(auth);
+    } catch (e) {
+      console.error("Sign-out error:", e);
     }
     router.push("/");
   };

@@ -14,6 +14,7 @@ export default function SignUpPage() {
     workingHours: "Avoid meetings before 10:00 AM",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -27,6 +28,7 @@ export default function SignUpPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       await saveOnboardingProfile({
         fullName: formData.fullName || "Aditya Nanda",
@@ -34,6 +36,15 @@ export default function SignUpPage() {
         role: formData.role || "Lead Architect",
         schedulePreference: formData.workingHours,
       });
+    } catch (err: any) {
+      console.error("Firebase Sign-Up Error:", err);
+      if (err.code === "auth/popup-closed-by-user") {
+        setErrorMessage("Sign-in window closed before completing authentication. Please try again.");
+      } else if (err.code === "auth/unauthorized-domain") {
+        setErrorMessage("Domain not authorized in Firebase Console (Authentication > Settings > Authorized Domains).");
+      } else {
+        setErrorMessage(err.message || "Failed to complete onboarding.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -72,6 +83,12 @@ export default function SignUpPage() {
             Calibrate your personal autonomous agent profile. All identity and email
             data will synchronize directly from your Google account.
           </p>
+
+          {errorMessage && (
+            <div className="mb-4 p-3 rounded-xl bg-[#ba1a1a]/10 border border-[#ba1a1a]/20 text-xs text-[#ba1a1a] text-left">
+              {errorMessage}
+            </div>
+          )}
 
           {/* Profile Form */}
           <form onSubmit={handleSignUp} className="space-y-4 text-left mb-6">
@@ -209,7 +226,7 @@ export default function SignUpPage() {
       {/* Footer */}
       <footer className="h-12 border-t border-[#e0e3e7] bg-[#f8fafd] px-6 lg:px-10 flex items-center justify-between text-xs text-[#747775] shrink-0">
         <div>PACT • Onboarding Profile Calibration</div>
-        <div>Preferences stored with local Supabase protection</div>
+        <div>Preferences stored with Cloud Firebase protection</div>
       </footer>
     </div>
   );

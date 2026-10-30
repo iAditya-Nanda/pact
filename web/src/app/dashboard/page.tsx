@@ -4,6 +4,10 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import {
+  fetchUserWorkspaceData,
+  approveClearanceInFirestore,
+} from "@/lib/firestore-sync";
+import {
   Calendar,
   Mail,
   CheckSquare,
@@ -53,16 +57,45 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
-  // Fetch real data from backend API
+  // Fetch real data from Firebase Firestore & backend API
   const fetchWorkspace = async () => {
     try {
-      const res = await fetch("/api/workspace/overview");
-      if (res.ok) {
-        const data = await res.json();
-        setWorkspace(data);
+      const activeUid = user?.id || "usr_adityananda_dev";
+      const activeEmail = user?.email || "adityananda.dev@gmail.com";
+      const activeName = user?.fullName || "Aditya Nanda";
+      const activeRole = user?.role || "Lead Architect";
+      const activeAge = user?.age || 24;
+      const activePref = user?.schedulePreference || "Avoid meetings before 10:00 AM";
+
+      const firestoreData = await fetchUserWorkspaceData(
+        activeUid,
+        activeEmail,
+        activeName,
+        activeRole,
+        activeAge,
+        activePref
+      );
+
+      if (firestoreData) {
+        setWorkspace(firestoreData);
+      } else {
+        const res = await fetch("/api/workspace/overview");
+        if (res.ok) {
+          const data = await res.json();
+          setWorkspace(data);
+        }
       }
     } catch (err) {
       console.error("Failed to load workspace data:", err);
+      try {
+        const res = await fetch("/api/workspace/overview");
+        if (res.ok) {
+          const data = await res.json();
+          setWorkspace(data);
+        }
+      } catch (fallbackErr) {
+        console.error("Workspace fallback error:", fallbackErr);
+      }
     } finally {
       setLoading(false);
     }
@@ -70,19 +103,24 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchWorkspace();
-  }, []);
+  }, [user]);
 
   const handleApproveAction = async (actionId: string, idempotencyKey: string) => {
     setApprovingId(actionId);
     try {
-      const res = await fetch("/api/actions/approve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actionId, idempotencyKey }),
-      });
-      if (res.ok) {
-        // Refresh real state from database
+      const activeUid = user?.id || "usr_adityananda_dev";
+      const directApproved = await approveClearanceInFirestore(activeUid, actionId, idempotencyKey);
+      if (directApproved) {
         await fetchWorkspace();
+      } else {
+        const res = await fetch("/api/actions/approve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ actionId, idempotencyKey }),
+        });
+        if (res.ok) {
+          await fetchWorkspace();
+        }
       }
     } catch (err) {
       console.error("Failed to approve action:", err);

@@ -12,6 +12,11 @@ from agent.models.preferences import (
     PreferenceScope,
     UserPreference,
 )
+from agent.models.alerts import (
+    ProactiveAlertType,
+    AlertSeverity,
+    ProactiveAlert,
+)
 
 __all__ = [
     "IntentCategory",
@@ -31,4 +36,7 @@ __all__ = [
     "ConstraintType",
     "PreferenceScope",
     "UserPreference",
+    "ProactiveAlertType",
+    "AlertSeverity",
+    "ProactiveAlert",
 ]

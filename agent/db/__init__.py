@@ -2,6 +2,7 @@ from agent.db.connection import DatabaseManager, db_manager
 from agent.db.schema import init_database, seed_mock_data
 from agent.db.preferences_repo import PreferencesRepository
 from agent.db.audit_repo import AuditRepository
+from agent.db.alerts_repo import AlertsRepository, alerts_repo
 
 __all__ = [
     "DatabaseManager",
@@ -10,4 +11,6 @@ __all__ = [
     "seed_mock_data",
     "PreferencesRepository",
     "AuditRepository",
+    "AlertsRepository",
+    "alerts_repo",
 ]

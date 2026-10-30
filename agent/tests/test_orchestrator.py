@@ -62,7 +62,7 @@ def test_consequential_workflow_suspends_and_resumes(test_orch):
             decision=ApprovalStatus.APPROVED,
             payload_hash=resumed["pending_approval"]["payload_hash"],
         )
-    assert resumed["status"] == "COMPLETED"
+    assert resumed["status"] == "COMPLETED", f"Workflow did not complete: status={resumed.get('status')}, error={resumed.get('error')}"
     assert len(resumed["execution_history"]) >= 1
 
 
@@ -87,7 +87,7 @@ def test_one_click_compensating_rollback(test_orch):
             decision=ApprovalStatus.APPROVED,
             payload_hash=resumed["pending_approval"]["payload_hash"],
         )
-    assert resumed["status"] == "COMPLETED"
+    assert resumed["status"] == "COMPLETED", f"Workflow did not complete: status={resumed.get('status')}, error={resumed.get('error')}"
     assert len(resumed["compensating_log"]) >= 1
 
     # Execute 1-click rollback

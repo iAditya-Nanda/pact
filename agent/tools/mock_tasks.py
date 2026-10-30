@@ -29,13 +29,16 @@ class MockTaskAdapter(ITaskService):
 
     def create_task(
         self,
-        title: str,
+        title: Optional[str] = None,
         description: Optional[str] = None,
         due_date: Optional[str] = None,
         priority: str = "MEDIUM",
         idempotency_key: str = "",
+        **kwargs,
     ) -> TaskItem:
         task_id = f"task_{uuid.uuid4().hex[:8]}"
+        t_title = title or kwargs.get("name") or kwargs.get("task_name") or "Follow-up Action"
+        d_due = due_date or kwargs.get("due") or "2026-10-31 17:00:00"
         with self.manager.get_connection() as conn:
             conn.execute(
                 """
@@ -43,13 +46,13 @@ class MockTaskAdapter(ITaskService):
                 (task_id, title, description, due_date, priority, status)
                 VALUES (?, ?, ?, ?, ?, 'PENDING');
                 """,
-                (task_id, title, description, due_date, priority),
+                (task_id, t_title, description, d_due, priority),
             )
         return TaskItem(
             task_id=task_id,
-            title=title,
+            title=t_title,
             description=description,
-            due_date=due_date,
+            due_date=d_due,
             priority=priority,
             status="PENDING",
         )

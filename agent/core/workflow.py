@@ -7,7 +7,7 @@ from agent.engine.intent_service import intent_service
 from agent.engine.planner_service import planner_service
 from agent.db.connection import db_manager
 from agent.db.preferences_repo import PreferencesRepository
-from agent.tools.registry import tool_registry
+from agent.tools.registry import ToolRegistry, tool_registry
 from agent.models.intent import ParsedIntent
 from agent.models.plan import ExecutionPlan, PlanStep, RiskTier, StepStatus
 from agent.models.approval import ApprovalRequest, ApprovalStatus
@@ -15,9 +15,10 @@ from agent.models.tools import ToolExecutionStatus
 
 
 class WorkflowEngine:
-    def __init__(self, manager=db_manager):
+    def __init__(self, manager=db_manager, registry=None):
         self.manager = manager
         self.pref_repo = PreferencesRepository(manager)
+        self.registry = registry or ToolRegistry(manager=manager)
         self.graph = self._build_graph()
 
     def _build_graph(self):
@@ -154,7 +155,7 @@ class WorkflowEngine:
         step = next(s for s in plan.steps if s.step_id == step_id)
 
         # Dispatch tool via ToolRegistry
-        exec_result = tool_registry.execute_tool(
+        exec_result = self.registry.execute_tool(
             tool_name=step.tool_name,
             parameters=step.parameters,
             run_id=state["run_id"],

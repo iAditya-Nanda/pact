@@ -7,13 +7,14 @@ from agent.core.workflow import WorkflowEngine
 from agent.core.state import AgentState
 from agent.db.connection import db_manager
 from agent.models.approval import ApprovalStatus
-from agent.tools.registry import tool_registry
+from agent.tools.registry import ToolRegistry, tool_registry
 
 
 class AgentOrchestrator:
-    def __init__(self, manager=db_manager):
+    def __init__(self, manager=db_manager, registry=None):
         self.manager = manager
-        self.engine = WorkflowEngine(manager=manager)
+        self.registry = registry or ToolRegistry(manager=manager)
+        self.engine = WorkflowEngine(manager=manager, registry=self.registry)
         # Durable SQLite checkpointer pointing to the database directory
         self.conn = sqlite3.connect(str(manager.db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
@@ -95,7 +96,7 @@ class AgentOrchestrator:
             params = action["parameters"]
             idempotency_key = f"revert_{run_id}_{uuid.uuid4().hex[:8]}"
 
-            res = tool_registry.execute_tool(
+            res = self.registry.execute_tool(
                 tool_name=tool_name,
                 parameters=params,
                 run_id=f"revert_{run_id}",

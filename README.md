@@ -12,6 +12,16 @@ PACT is an agentic orchestration platform designed to bridge email, calendar, an
 
 ---
 
+## Architecture & Specifications
+
+For comprehensive technical specifications and blueprints, see:
+- [Agentic AI Subsystem Architecture (Local-First)](file:///home/kenx1kaneki/Desktop/Codestuff2/pact/docs/AGENTIC_SYSTEM_ARCHITECTURE.md)
+- [Product Specification & System Architecture Blueprint](file:///home/kenx1kaneki/Desktop/Codestuff2/pact/docs/PRODUCT_SPEC_AND_SYSTEM_ARCHITECTURE.md)
+- [Cross-Platform Application Connectivity Research](file:///home/kenx1kaneki/Desktop/Codestuff2/pact/docs/APP_INTEGRATION_RESEARCH.md)
+- [M3 Enterprise Design System Specification](file:///home/kenx1kaneki/Desktop/Codestuff2/pact/docs/DESIGN.md)
+
+---
+
 ## Architectural Principles
 
 PACT is architected around four operational requirements:

@@ -1,0 +1,37 @@
+QUESTION 01
+
+Domain: Agentic AI | Full-Stack Development
+Task: Interpret Instructions, Execute Multi-Step Cross-App Workflows, Verify Tool Calls & Human Approval
+
+1. Problem Statement
+
+People manage emails, calendar events, and tasks across separate applications, making it difficult to coordinate schedules and meet deadlines.
+
+Develop an AI agent that coordinates these applications, executes multi-step workflows, and responds intelligently to changing data and failures. The agent must perform actual tool calls and verify their results rather than simply suggesting actions.
+
+2. Core Requirements
+
+Agent Execution
+  • Interpret user instructions, create execution plans, and perform multi-step actions across Email, Calendar, and Tasks.
+
+Human Approval
+  • Require explicit user approval before consequential actions, such as sending emails or cancelling events.
+
+Proactive Behaviour
+  • Detect relevant events, such as scheduling conflicts or approaching deadlines, assess their significance, and recommend appropriate actions without a user prompt.
+
+User Preferences
+  • Store and apply preferences, such as avoiding meetings before 10:00 AM. Allow users to view, edit, and delete individual preferences.
+
+Unified Dashboard
+  • Build a single interface displaying important emails, upcoming calendar events, pending tasks, and alerts.
+  • Include an AI chat interface, controls for reviewing and approving proposed actions, and an activity log showing the agent's actions and their results, including failures.
+
+Reliability
+  • Verify action results, handle failures gracefully, and prevent duplicate actions during retries.
+
+3. Constraints
+
+• Consequential actions must require explicit user approval.
+• The agent must transparently report execution results and failures.
+• Retrying an operation must not duplicate an action that has already been completed.

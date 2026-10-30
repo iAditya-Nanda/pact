@@ -411,7 +411,11 @@ export default function DashboardPage() {
             <div className="ml-2 hidden md:inline-flex items-center gap-2">
               <span className="px-2.5 py-1 rounded-full bg-[#e6f4ea] dark:bg-[#0f5223] text-[#137333] dark:text-[#81c995] text-2xs font-bold border border-[#ceead6] dark:border-[#137333] inline-flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#1e8e3e] animate-pulse" />
-                <span>Live Google Workspace Connected</span>
+                <span>
+                  {workspace?.isDevBypass
+                    ? "Google OAuth Connected (Dev Mode)"
+                    : "Live Google Workspace Connected"}
+                </span>
               </span>
               <button
                 onClick={refreshWorkspace}
@@ -462,6 +466,44 @@ export default function DashboardPage() {
             <Zap className="w-3.5 h-3.5" />
             <span>{isConnectingGoogle ? "Connecting Google..." : "Connect Google Workspace"}</span>
           </button>
+        </div>
+      )}
+
+      {/* Banner: Dev Mode notice with 1-click Cloud Console activation links */}
+      {workspace?.isDevBypass && mounted && (
+        <div className="mx-4 lg:mx-6 mt-2.5 px-4 py-2 rounded-2xl bg-[#e8f0fe] dark:bg-[#002b4d] border border-[#0b57d0]/30 dark:border-[#a8c7fa]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-[#0b57d0] dark:bg-[#a8c7fa] shrink-0" />
+            <span className="text-2xs font-medium text-[#041e49] dark:text-[#d3e3fd] truncate">
+              Google OAuth Token Verified ({displayEmail}). Enable the APIs in Google Cloud project 651148810116 to switch from Dev Mode to direct live streams:
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <a
+              href="https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=651148810116"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 py-0.5 rounded-lg bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] text-3xs font-bold text-[#0b57d0] dark:text-[#a8c7fa] border border-[#0b57d0]/20 transition-all cursor-pointer"
+            >
+              Enable Gmail API
+            </a>
+            <a
+              href="https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview?project=651148810116"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 py-0.5 rounded-lg bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] text-3xs font-bold text-[#0b57d0] dark:text-[#a8c7fa] border border-[#0b57d0]/20 transition-all cursor-pointer"
+            >
+              Enable Calendar API
+            </a>
+            <a
+              href="https://console.developers.google.com/apis/api/tasks.googleapis.com/overview?project=651148810116"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 py-0.5 rounded-lg bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] text-3xs font-bold text-[#0b57d0] dark:text-[#a8c7fa] border border-[#0b57d0]/20 transition-all cursor-pointer"
+            >
+              Enable Tasks API
+            </a>
+          </div>
         </div>
       )}
 

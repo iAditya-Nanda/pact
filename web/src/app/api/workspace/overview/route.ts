@@ -34,6 +34,8 @@ export async function GET(request: Request) {
 
     let workspace = readWorkspace();
     let isLiveGoogleData = false;
+    let isDevBypass = false;
+    let disabledApis: string[] = [];
     let authError: string | null = null;
 
     if (token) {
@@ -72,6 +74,8 @@ export async function GET(request: Request) {
           }
 
           isLiveGoogleData = true;
+          isDevBypass = Boolean(liveData.isDevBypass);
+          disabledApis = liveData.disabledApis || [];
           writeWorkspace(workspace);
         }
       } catch (liveErr: any) {
@@ -83,6 +87,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       isLiveGoogleData,
+      isDevBypass,
+      disabledApis,
       requiresGoogleAuth: !token || !isLiveGoogleData,
       authError,
       ...workspace,

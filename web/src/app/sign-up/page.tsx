@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 export default function SignUpPage() {
-  const { saveOnboardingProfile, isLoading } = useAuth();
+  const { user, saveOnboardingProfile, isLoading } = useAuth();
   const [formData, setFormData] = useState({
     fullName: "",
     age: "",
@@ -15,6 +16,14 @@ export default function SignUpPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const router = useRouter();
+
+  // If already logged in, redirect directly to dashboard
+  useEffect(() => {
+    if (user) {
+      router.push("/dashboard");
+    }
+  }, [user, router]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>

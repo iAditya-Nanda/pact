@@ -6,11 +6,11 @@ import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
+  GoogleAuthProvider,
   User as FirebaseUser,
 } from "firebase/auth";
 import {
   doc,
-  getDoc,
   setDoc,
   serverTimestamp,
 } from "firebase/firestore";
@@ -42,79 +42,108 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  isLoading: true,
+  isLoading: false,
   loginWithGoogle: async () => {},
   saveOnboardingProfile: async () => {},
   logout: async () => {},
 });
 
+// Non-blocking Firestore background sync with timeout protection
+async function safeFirestoreSync(userId: string, data: Partial<UserProfile>) {
+  try {
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Firestore sync timeout")), 2000)
+    );
+    const syncOp = async () => {
+      const userDocRef = doc(db, "users", userId);
+      await setDoc(
+        userDocRef,
+        {
+          uid: userId,
+          email: data.email,
+          fullName: data.fullName,
+          avatarUrl: data.avatarUrl,
+          role: data.role,
+          age: data.age,
+          schedulePreference: data.schedulePreference,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    };
+    await Promise.race([syncOp(), timeout]);
+  } catch (e) {
+    // Non-fatal: session is fully saved in localStorage and Firebase Auth
+    console.warn("Background Firestore sync skipped or timed out:", e);
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialize immediately from localStorage for zero-latency session recovery
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("pact_auth_user");
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    // If session exists in cache, loading is false immediately
+    if (typeof window !== "undefined") {
+      return !localStorage.getItem("pact_auth_user");
+    }
+    return true;
+  });
+
   const router = useRouter();
 
   // Listen to Firebase Auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        try {
-          // Fetch synced profile from Cloud Firestore
-          const userDocRef = doc(db, "users", firebaseUser.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          let profileData = userDoc.exists() ? userDoc.data() : null;
-
-          if (!profileData) {
-            // Initialize document in Firestore with Google Auth details
-            const initialDoc = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || "adityananda.dev@gmail.com",
-              fullName: firebaseUser.displayName || "Aditya Nanda",
-              avatarUrl: firebaseUser.photoURL || "",
-              role: "Lead Architect",
-              age: 24,
-              schedulePreference: "Avoid meetings before 10:00 AM",
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            };
-            await setDoc(userDocRef, initialDoc, { merge: true });
-            profileData = initialDoc;
-          }
-
-          const profile: UserProfile = {
-            id: firebaseUser.uid,
-            email: firebaseUser.email || "adityananda.dev@gmail.com",
-            fullName: profileData.fullName || firebaseUser.displayName || "Aditya Nanda",
-            avatarUrl: profileData.avatarUrl || firebaseUser.photoURL || "",
-            role: profileData.role || "Lead Architect",
-            age: profileData.age || 24,
-            schedulePreference:
-              profileData.schedulePreference || "Avoid meetings before 10:00 AM",
-            googleAccessToken: localStorage.getItem("pact_google_access_token") || undefined,
-          };
-
-          setUser(profile);
-          localStorage.setItem("pact_auth_user", JSON.stringify(profile));
-        } catch (error) {
-          console.error("Firestore user profile retrieval error:", error);
-          // Fallback to Google Auth metadata directly
-          const fallbackProfile: UserProfile = {
-            id: firebaseUser.uid,
-            email: firebaseUser.email || "adityananda.dev@gmail.com",
-            fullName: firebaseUser.displayName || "Aditya Nanda",
-            avatarUrl: firebaseUser.photoURL || "",
-            role: "Lead Architect",
-            age: 24,
-            schedulePreference: "Avoid meetings before 10:00 AM",
-          };
-          setUser(fallbackProfile);
+        const stored =
+          typeof window !== "undefined"
+            ? localStorage.getItem("pact_auth_user")
+            : null;
+        let existing: Partial<UserProfile> = {};
+        if (stored) {
+          try {
+            existing = JSON.parse(stored);
+          } catch {}
         }
-      } else {
-        setUser(null);
-        localStorage.removeItem("pact_auth_user");
-        localStorage.removeItem("pact_google_access_token");
+
+        const profile: UserProfile = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || "adityananda.dev@gmail.com",
+          fullName:
+            firebaseUser.displayName || existing.fullName || "Aditya Nanda",
+          avatarUrl: firebaseUser.photoURL || existing.avatarUrl || "",
+          role: existing.role || "Lead Architect",
+          age: existing.age || 24,
+          schedulePreference:
+            existing.schedulePreference || "Avoid meetings before 10:00 AM",
+          googleAccessToken:
+            typeof window !== "undefined"
+              ? localStorage.getItem("pact_google_access_token") || undefined
+              : undefined,
+        };
+
+        setUser(profile);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("pact_auth_user", JSON.stringify(profile));
+        }
+
+        // Fire-and-forget sync to Firestore
+        safeFirestoreSync(firebaseUser.uid, profile);
       }
       setIsLoading(false);
     });
@@ -125,51 +154,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const loginWithGoogle = async () => {
     setIsLoading(true);
     try {
-      // Direct Google Sign In via Firebase popup with Google Workspace scopes
+      // 1. Direct Google Sign In via Firebase popup
       const result = await signInWithPopup(auth, googleProvider);
-      const credential = (await import("firebase/auth")).GoogleAuthProvider.credentialFromResult(result);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken;
 
-      if (token) {
+      if (token && typeof window !== "undefined") {
         localStorage.setItem("pact_google_access_token", token);
       }
 
       const fbUser = result.user;
-      const userDocRef = doc(db, "users", fbUser.uid);
-      const userDoc = await getDoc(userDocRef);
+      const stored =
+        typeof window !== "undefined"
+          ? localStorage.getItem("pact_auth_user")
+          : null;
+      let existing: Partial<UserProfile> = {};
+      if (stored) {
+        try {
+          existing = JSON.parse(stored);
+        } catch {}
+      }
 
-      const existingData = userDoc.exists() ? userDoc.data() : {};
-      const updatedProfile: UserProfile = {
+      const profile: UserProfile = {
         id: fbUser.uid,
         email: fbUser.email || "adityananda.dev@gmail.com",
-        fullName: existingData.fullName || fbUser.displayName || "Aditya Nanda",
-        avatarUrl: existingData.avatarUrl || fbUser.photoURL || "",
-        role: existingData.role || "Lead Architect",
-        age: existingData.age || 24,
+        fullName: fbUser.displayName || existing.fullName || "Aditya Nanda",
+        avatarUrl: fbUser.photoURL || existing.avatarUrl || "",
+        role: existing.role || "Lead Architect",
+        age: existing.age || 24,
         schedulePreference:
-          existingData.schedulePreference || "Avoid meetings before 10:00 AM",
+          existing.schedulePreference || "Avoid meetings before 10:00 AM",
         googleAccessToken: token || undefined,
       };
 
-      // Persist to Firestore
-      await setDoc(
-        userDocRef,
-        {
-          uid: fbUser.uid,
-          email: fbUser.email || "adityananda.dev@gmail.com",
-          fullName: updatedProfile.fullName,
-          avatarUrl: updatedProfile.avatarUrl,
-          role: updatedProfile.role,
-          age: updatedProfile.age,
-          schedulePreference: updatedProfile.schedulePreference,
-          lastLoginAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+      // 2. Persist to state and browser session immediately
+      setUser(profile);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pact_auth_user", JSON.stringify(profile));
+      }
 
-      setUser(updatedProfile);
-      localStorage.setItem("pact_auth_user", JSON.stringify(updatedProfile));
+      // 3. Background sync to Firestore without blocking navigation
+      safeFirestoreSync(fbUser.uid, profile);
+
+      // 4. Instantly navigate to dashboard
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Firebase Google Sign-In error:", error);
@@ -187,45 +214,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }) => {
     setIsLoading(true);
     try {
-      // Trigger Google Sign-in to authenticate identity and acquire Google Workspace credentials
       const result = await signInWithPopup(auth, googleProvider);
-      const credential = (await import("firebase/auth")).GoogleAuthProvider.credentialFromResult(result);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken;
 
-      if (token) {
+      if (token && typeof window !== "undefined") {
         localStorage.setItem("pact_google_access_token", token);
       }
 
       const fbUser = result.user;
-      const userDocRef = doc(db, "users", fbUser.uid);
-
-      const profilePayload = {
-        uid: fbUser.uid,
+      const profile: UserProfile = {
+        id: fbUser.uid,
         email: fbUser.email || "adityananda.dev@gmail.com",
         fullName: data.fullName || fbUser.displayName || "Aditya Nanda",
         avatarUrl: fbUser.photoURL || "",
         role: data.role || "Lead Architect",
         age: data.age || 24,
         schedulePreference: data.schedulePreference,
-        updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
-      };
-
-      await setDoc(userDocRef, profilePayload, { merge: true });
-
-      const updatedUser: UserProfile = {
-        id: fbUser.uid,
-        email: fbUser.email || "adityananda.dev@gmail.com",
-        fullName: profilePayload.fullName,
-        avatarUrl: profilePayload.avatarUrl,
-        role: profilePayload.role,
-        age: profilePayload.age,
-        schedulePreference: profilePayload.schedulePreference,
         googleAccessToken: token || undefined,
       };
 
-      setUser(updatedUser);
-      localStorage.setItem("pact_auth_user", JSON.stringify(updatedUser));
+      setUser(profile);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pact_auth_user", JSON.stringify(profile));
+      }
+
+      safeFirestoreSync(fbUser.uid, profile);
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Firebase Profile Setup error:", error);
@@ -236,8 +250,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const logout = async () => {
-    localStorage.removeItem("pact_auth_user");
-    localStorage.removeItem("pact_google_access_token");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("pact_auth_user");
+      localStorage.removeItem("pact_google_access_token");
+    }
     setUser(null);
     try {
       await signOut(auth);

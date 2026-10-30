@@ -8,6 +8,8 @@ from agent.models.tools import ToolExecutionResult, ToolExecutionStatus, Verific
 from agent.tools.mock_email import MockEmailAdapter
 from agent.tools.mock_calendar import MockCalendarAdapter
 from agent.tools.mock_tasks import MockTaskAdapter
+from agent.telemetry.tracer import tracer
+from agent.reliability.fault_injector import fault_injector
 
 
 class ToolRegistry:
@@ -98,16 +100,25 @@ class ToolRegistry:
 
         # 3. Dispatch to Tool Adapter
         try:
-            raw_result = handler(**parameters)
-            if isinstance(raw_result, list):
-                data_dict = [
-                    item.model_dump() if hasattr(item, "model_dump") else item
-                    for item in raw_result
-                ]
-            elif hasattr(raw_result, "model_dump"):
-                data_dict = raw_result.model_dump()
-            else:
-                data_dict = raw_result
+            with tracer.start_span(
+                f"tool_execution:{tool_name}",
+                trace_id=run_id,
+                attributes={"tool_name": tool_name, "step_id": step_id, "idempotency_key": idempotency_key},
+            ):
+                fault_error = fault_injector.should_fail(tool_name)
+                if fault_error:
+                    raise RuntimeError(fault_error)
+
+                raw_result = handler(**parameters)
+                if isinstance(raw_result, list):
+                    data_dict = [
+                        item.model_dump() if hasattr(item, "model_dump") else item
+                        for item in raw_result
+                    ]
+                elif hasattr(raw_result, "model_dump"):
+                    data_dict = raw_result.model_dump()
+                else:
+                    data_dict = raw_result
         except Exception as e:
             elapsed = int((time.time() - start_time) * 1000)
             self.audit_repo.record_action_result(

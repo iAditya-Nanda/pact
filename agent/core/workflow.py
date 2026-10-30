@@ -12,6 +12,8 @@ from agent.models.intent import ParsedIntent
 from agent.models.plan import ExecutionPlan, PlanStep, RiskTier, StepStatus
 from agent.models.approval import ApprovalRequest, ApprovalStatus
 from agent.models.tools import ToolExecutionStatus
+from agent.telemetry.tracer import tracer
+from agent.security.sanitizer import security_sanitizer
 
 
 class WorkflowEngine:
@@ -38,6 +40,7 @@ class WorkflowEngine:
             self._route_after_intent,
             {
                 "clarification": END,
+                "failed": END,
                 "proceed": "plan_workflow",
             },
         )
@@ -68,150 +71,173 @@ class WorkflowEngine:
 
     def _node_parse_intent(self, state: AgentState) -> Dict[str, Any]:
         instruction = state.get("raw_instruction", "")
-        intent: ParsedIntent = intent_service.extract_intent(instruction)
+        user_id = state.get("user_id", "default_user")
+        run_id = state.get("run_id", "run_unknown")
 
-        if intent.requires_clarification:
+        with tracer.start_span("intent_extraction", trace_id=run_id, attributes={"instruction": instruction, "user_id": user_id}):
+            # Pre-execution security sanitization & injection defense
+            sec_check = security_sanitizer.analyze_instruction(instruction, user_id=user_id)
+            if not sec_check.is_safe:
+                return {
+                    "status": "FAILED",
+                    "error": sec_check.reason,
+                    "final_summary": f"Security violation blocked: {sec_check.reason}",
+                }
+
+            intent: ParsedIntent = intent_service.extract_intent(sec_check.sanitized_instruction)
+
+            if intent.requires_clarification:
+                return {
+                    "intent": intent.model_dump(mode="json"),
+                    "requires_clarification": True,
+                    "clarification_prompt": intent.clarification_prompt,
+                    "status": "CLARIFICATION_NEEDED",
+                    "final_summary": intent.clarification_prompt,
+                }
+
             return {
                 "intent": intent.model_dump(mode="json"),
-                "requires_clarification": True,
-                "clarification_prompt": intent.clarification_prompt,
-                "status": "CLARIFICATION_NEEDED",
-                "final_summary": intent.clarification_prompt,
+                "requires_clarification": False,
+                "status": "PLANNING",
             }
-
-        return {
-            "intent": intent.model_dump(mode="json"),
-            "requires_clarification": False,
-            "status": "PLANNING",
-        }
 
     def _node_plan_workflow(self, state: AgentState) -> Dict[str, Any]:
         intent = ParsedIntent.model_validate(state["intent"])
         user_id = state.get("user_id", "default_user")
         run_id = state.get("run_id", f"run_{uuid.uuid4().hex[:10]}")
 
-        active_prefs = self.pref_repo.list_active(user_id=user_id)
-        plan: ExecutionPlan = planner_service.generate_plan(
-            intent=intent,
-            preferences=active_prefs,
-            run_id=run_id,
-        )
+        with tracer.start_span("dag_planning", trace_id=run_id, attributes={"intent_category": intent.category.value}):
+            active_prefs = self.pref_repo.list_active(user_id=user_id)
+            plan: ExecutionPlan = planner_service.generate_plan(
+                intent=intent,
+                preferences=active_prefs,
+                run_id=run_id,
+            )
 
-        return {
-            "run_id": run_id,
-            "plan": plan.model_dump(mode="json"),
-            "status": "EXECUTING",
-            "execution_history": [],
-            "compensating_log": [],
-        }
+            return {
+                "run_id": run_id,
+                "plan": plan.model_dump(mode="json"),
+                "status": "EXECUTING",
+                "execution_history": [],
+                "compensating_log": [],
+            }
 
     def _node_policy_gate(self, state: AgentState) -> Dict[str, Any]:
-        plan = ExecutionPlan.model_validate(state["plan"])
-        ready_steps = plan.get_ready_steps()
+        run_id = state.get("run_id", "run_unknown")
+        with tracer.start_span("policy_gate", trace_id=run_id):
+            plan = ExecutionPlan.model_validate(state["plan"])
+            ready_steps = plan.get_ready_steps()
 
-        if not ready_steps:
-            all_done = all(s.status in [StepStatus.SUCCESS, StepStatus.SKIPPED] for s in plan.steps)
-            if all_done:
-                return {"status": "COMPLETED"}
-            return {"status": "FAILED", "error": "Deadlock: No ready steps available"}
+            if not ready_steps:
+                all_done = all(s.status in [StepStatus.SUCCESS, StepStatus.SKIPPED] for s in plan.steps)
+                if all_done:
+                    return {"status": "COMPLETED"}
+                return {"status": "FAILED", "error": "Deadlock: No ready steps available"}
 
-        target_step = ready_steps[0]
+            target_step = ready_steps[0]
 
-        # Human-in-the-Loop Clearance Check
-        if target_step.risk_tier == RiskTier.TIER_1_CONSEQUENTIAL:
-            approval_req = ApprovalRequest(
-                approval_id=f"appr_{uuid.uuid4().hex[:8]}",
-                run_id=state["run_id"],
-                step_id=target_step.step_id,
-                tool_name=target_step.tool_name,
-                summary=f"Requires clearance: Execute '{target_step.tool_name}'",
-                payload=target_step.parameters,
-                created_at="now",
-            )
-            sealed_hash = approval_req.seal_payload()
+            # Human-in-the-Loop Clearance Check
+            if target_step.risk_tier == RiskTier.TIER_1_CONSEQUENTIAL:
+                approval_req = ApprovalRequest(
+                    approval_id=f"appr_{uuid.uuid4().hex[:8]}",
+                    run_id=state["run_id"],
+                    step_id=target_step.step_id,
+                    tool_name=target_step.tool_name,
+                    summary=f"Requires clearance: Execute '{target_step.tool_name}'",
+                    payload=target_step.parameters,
+                    created_at="now",
+                )
+                sealed_hash = approval_req.seal_payload()
 
-            # Native LangGraph interrupt halts execution and preserves state
-            resume_data = interrupt({
-                "action": "APPROVAL_REQUIRED",
-                "request": approval_req.model_dump(mode="json"),
-                "payload_hash": sealed_hash,
-            })
+                # Native LangGraph interrupt halts execution and preserves state
+                resume_data = interrupt({
+                    "action": "APPROVAL_REQUIRED",
+                    "request": approval_req.model_dump(mode="json"),
+                    "payload_hash": sealed_hash,
+                })
 
-            decision = resume_data.get("decision") if isinstance(resume_data, dict) else resume_data
-            if decision != ApprovalStatus.APPROVED.value and decision != "APPROVED":
-                return {
-                    "status": "FAILED",
-                    "error": f"Action '{target_step.tool_name}' was rejected by user.",
-                }
+                decision = resume_data.get("decision") if isinstance(resume_data, dict) else resume_data
+                if decision != ApprovalStatus.APPROVED.value and decision != "APPROVED":
+                    return {
+                        "status": "FAILED",
+                        "error": f"Action '{target_step.tool_name}' was rejected by user.",
+                    }
 
-        return {
-            "current_step_id": target_step.step_id,
-            "status": "EXECUTING",
-        }
+            return {
+                "current_step_id": target_step.step_id,
+                "status": "EXECUTING",
+            }
 
     def _node_execute_step(self, state: AgentState) -> Dict[str, Any]:
-        plan = ExecutionPlan.model_validate(state["plan"])
+        run_id = state.get("run_id", "run_unknown")
         step_id = state["current_step_id"]
-        step = next(s for s in plan.steps if s.step_id == step_id)
 
-        # Dispatch tool via ToolRegistry
-        exec_result = self.registry.execute_tool(
-            tool_name=step.tool_name,
-            parameters=step.parameters,
-            run_id=state["run_id"],
-            step_id=step.step_id,
-            idempotency_key=step.idempotency_key,
-        )
+        with tracer.start_span("execute_step", trace_id=run_id, attributes={"step_id": step_id}):
+            plan = ExecutionPlan.model_validate(state["plan"])
+            step = next(s for s in plan.steps if s.step_id == step_id)
 
-        history = list(state.get("execution_history", []))
-        compensating_log = list(state.get("compensating_log", []))
+            # Dispatch tool via ToolRegistry
+            exec_result = self.registry.execute_tool(
+                tool_name=step.tool_name,
+                parameters=step.parameters,
+                run_id=state["run_id"],
+                step_id=step.step_id,
+                idempotency_key=step.idempotency_key,
+            )
 
-        history.append(exec_result.model_dump(mode="json"))
+            history = list(state.get("execution_history", []))
+            compensating_log = list(state.get("compensating_log", []))
 
-        if exec_result.data and isinstance(exec_result.data, dict) and "compensating_action" in exec_result.data:
-            compensating_log.append(exec_result.data["compensating_action"])
+            history.append(exec_result.model_dump(mode="json"))
 
-        if exec_result.status == ToolExecutionStatus.FAILED:
-            step.status = StepStatus.FAILED
-            step.error = exec_result.error
+            if exec_result.data and isinstance(exec_result.data, dict) and "compensating_action" in exec_result.data:
+                compensating_log.append(exec_result.data["compensating_action"])
+
+            if exec_result.status == ToolExecutionStatus.FAILED:
+                step.status = StepStatus.FAILED
+                step.error = exec_result.error
+                return {
+                    "plan": plan.model_dump(mode="json"),
+                    "execution_history": history,
+                    "compensating_log": compensating_log,
+                    "status": "FAILED",
+                    "error": exec_result.error,
+                }
+
+            step.status = StepStatus.SUCCESS
+            step.result = exec_result.data
+
             return {
                 "plan": plan.model_dump(mode="json"),
                 "execution_history": history,
                 "compensating_log": compensating_log,
-                "status": "FAILED",
-                "error": exec_result.error,
+                "status": "EXECUTING",
             }
 
-        step.status = StepStatus.SUCCESS
-        step.result = exec_result.data
-
-        return {
-            "plan": plan.model_dump(mode="json"),
-            "execution_history": history,
-            "compensating_log": compensating_log,
-            "status": "EXECUTING",
-        }
-
     def _node_synthesize_summary(self, state: AgentState) -> Dict[str, Any]:
-        if state.get("status") == "FAILED":
-            summary = f"Workflow failed: {state.get('error', 'Unknown execution error')}"
-        elif state.get("status") == "CLARIFICATION_NEEDED":
-            summary = state.get("clarification_prompt", "Clarification needed.")
-        else:
-            steps_done = len(state.get("execution_history", []))
-            summary = (
-                f"Successfully completed {steps_done} action(s) across systems. "
-                f"All state mutations verified and logged."
-            )
+        run_id = state.get("run_id", "run_unknown")
+        with tracer.start_span("synthesize_summary", trace_id=run_id):
+            if state.get("status") == "FAILED":
+                summary = f"Workflow failed: {state.get('error', 'Unknown execution error')}"
+            elif state.get("status") == "CLARIFICATION_NEEDED":
+                summary = state.get("clarification_prompt", "Clarification needed.")
+            else:
+                steps_done = len(state.get("execution_history", []))
+                summary = (
+                    f"Successfully completed {steps_done} action(s) across systems. "
+                    f"All state mutations verified and logged."
+                )
 
-        return {
-            "final_summary": summary,
-            "status": "COMPLETED" if state.get("status") != "FAILED" else "FAILED",
-        }
+            return {
+                "final_summary": summary,
+                "status": "COMPLETED" if state.get("status") != "FAILED" else "FAILED",
+            }
 
     # --- Routing Logic ---
 
-    def _route_after_intent(self, state: AgentState) -> Literal["clarification", "proceed"]:
+    def _route_after_intent(self, state: AgentState) -> Literal["clarification", "failed", "proceed"]:
+        if state.get("status") == "FAILED":
+            return "failed"
         if state.get("requires_clarification"):
             return "clarification"
         return "proceed"

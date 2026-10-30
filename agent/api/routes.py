@@ -22,14 +22,23 @@ from agent.api.dependencies import (
     get_pref_repo,
     get_alerts_repo,
     get_scanner,
+    get_audit_repo,
+    get_tracer,
+    get_metrics_collector,
+    get_security_sanitizer,
 )
 from agent.api.events import event_broadcaster, sync_gen_to_async
 from agent.core.orchestrator import AgentOrchestrator
 from agent.db.connection import DatabaseManager
 from agent.db.preferences_repo import PreferencesRepository
 from agent.db.alerts_repo import AlertsRepository
+from agent.db.audit_repo import AuditRepository
 from agent.proactive.scanner import ProactiveScanner
 from agent.models.preferences import UserPreference
+from agent.telemetry.models import TraceTree, SystemMetrics
+from agent.telemetry.tracer import Tracer
+from agent.telemetry.metrics import MetricsCollector
+from agent.security.sanitizer import SecuritySanitizer
 
 router = APIRouter(prefix="/api", tags=["Agentic Workflow Gateway"])
 
@@ -334,3 +343,64 @@ async def sse_global_events():
             await event_broadcaster.unsubscribe(q)
 
     return EventSourceResponse(event_generator())
+
+
+@router.get("/telemetry/metrics", response_model=SystemMetrics)
+def get_system_telemetry_metrics(
+    collector: MetricsCollector = Depends(get_metrics_collector),
+):
+    """
+    Computes real-time system performance, latency percentiles, tool usage, and security blocks.
+    """
+    return collector.get_system_metrics()
+
+
+@router.get("/telemetry/traces")
+def list_execution_traces(
+    limit: int = Query(20, ge=1, le=100),
+    tracer_svc: Tracer = Depends(get_tracer),
+):
+    """
+    Lists recent execution traces with duration and error flags.
+    """
+    return tracer_svc.list_recent_traces(limit=limit)
+
+
+@router.get("/telemetry/traces/{trace_id}", response_model=TraceTree)
+def get_trace_tree(
+    trace_id: str,
+    tracer_svc: Tracer = Depends(get_tracer),
+):
+    """
+    Retrieves full hierarchical execution span waterfall tree for a specific trace or run ID.
+    """
+    tree = tracer_svc.get_trace(trace_id)
+    if not tree:
+        raise HTTPException(status_code=404, detail=f"Trace '{trace_id}' not found")
+    return tree
+
+
+@router.get("/audit/runs/{run_id}")
+def get_run_audit_trail(
+    run_id: str,
+    audit_svc: AuditRepository = Depends(get_audit_repo),
+):
+    """
+    Retrieves complete chronological forensic audit trail of all actions executed during a run.
+    """
+    history = audit_svc.get_run_history(run_id)
+    if not history:
+        raise HTTPException(status_code=404, detail=f"No audit records found for run '{run_id}'")
+    return history
+
+
+@router.get("/security/events")
+def list_security_events(
+    limit: int = Query(50, ge=1, le=200),
+    sanitizer_svc: SecuritySanitizer = Depends(get_security_sanitizer),
+):
+    """
+    Queries recorded prompt injection attempts, jailbreaks, and clearance bypass violations.
+    """
+    return sanitizer_svc.list_security_events(limit=limit)
+

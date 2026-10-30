@@ -53,6 +53,18 @@ Return the ExecutionPlan JSON with run_id="{active_run_id}" and plan_id="plan_{u
 
         # Enforce run_id and compute deterministic idempotency keys on all steps
         plan.run_id = active_run_id
+
+        # Reliability guard: Filter out hallucinated auxiliary tools (e.g. print_to_console, display_output)
+        valid_tools = {
+            "search_emails", "read_email", "draft_email", "send_email",
+            "check_calendar_conflicts", "list_calendar_events", "create_calendar_event",
+            "reschedule_calendar_event", "cancel_calendar_event",
+            "list_tasks", "create_task", "complete_task",
+        }
+        filtered_steps = [s for s in plan.steps if s.tool_name in valid_tools]
+        if filtered_steps:
+            plan.steps = filtered_steps
+
         for step in plan.steps:
             # Auto-enforce TIER_1_CONSEQUENTIAL for known mutating tools
             if step.tool_name in ["send_email", "reschedule_calendar_event", "cancel_calendar_event", "complete_task"]:

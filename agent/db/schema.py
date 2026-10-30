@@ -83,11 +83,40 @@ CREATE TABLE IF NOT EXISTS proactive_alerts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 7. Distributed Execution Telemetry & Tracing Spans
+CREATE TABLE IF NOT EXISTS execution_spans (
+    span_id TEXT PRIMARY KEY,
+    trace_id TEXT NOT NULL,
+    parent_span_id TEXT,
+    name TEXT NOT NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    duration_ms REAL NOT NULL,
+    attributes_json TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'OK',
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. Security Audit & Injection Defense Events
+CREATE TABLE IF NOT EXISTS security_events (
+    event_id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL, -- PROMPT_INJECTION, TAMPER_ATTEMPT, PRIVILEGE_ESCALATION
+    severity TEXT NOT NULL,   -- LOW, MEDIUM, HIGH, CRITICAL
+    user_id TEXT NOT NULL,
+    instruction TEXT,
+    reason TEXT NOT NULL,
+    details_json TEXT NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indices for performance and deterministic lookups
 CREATE INDEX IF NOT EXISTS idx_actions_idempotency ON agent_actions(idempotency_key);
 CREATE INDEX IF NOT EXISTS idx_actions_run ON agent_actions(run_id);
 CREATE INDEX IF NOT EXISTS idx_cal_times ON mock_calendar_events(start_time, end_time);
 CREATE INDEX IF NOT EXISTS idx_pref_scope ON user_preferences(user_id, scope, is_active);
+CREATE INDEX IF NOT EXISTS idx_spans_trace ON execution_spans(trace_id);
+CREATE INDEX IF NOT EXISTS idx_sec_events_user ON security_events(user_id);
 """
 
 

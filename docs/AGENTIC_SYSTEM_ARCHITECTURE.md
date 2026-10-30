@@ -30,8 +30,8 @@ flowchart TD
     subgraph LocalInferenceEngine ["Local C++ Inference Engine (Layer 4)"]
         LlamaCPP["llama.cpp / llama-cpp-python Runtime"]
         GrammarConstrainer["GBNF Grammar & Pydantic Constrained Sampler"]
-        FastGGUF["Tier A Model (Fast Intent/Extract)\nQwen 2.5 3B/7B GGUF"]
-        DeepGGUF["Tier B Model (Planning/Reasoning)\nQwen 2.5 14B / Llama 3.1 8B GGUF"]
+        FastGGUF["Tier A Model (Fast Intent/Extract)\nQwen 2.5 3B / Llama 3.2 3B GGUF"]
+        DeepGGUF["Tier B Model (Planning/Reasoning)\nQwen 2.5 3B/7B Q4 GGUF (Metal Accelerated)"]
     end
 
     subgraph AgenticCore ["LangGraph Stateful Orchestrator (Layers 2, 3, 5, 6, 7, 8)"]
@@ -146,16 +146,18 @@ stateDiagram-v2
 ### Layer 4: Local C++ Model Execution Engine
 * **Role:** Provide fast, reliable, fully offline LLM inference directly on local hardware without cloud latency or costs.
 * **Technology:** **`llama.cpp`** wrapped with **`llama-cpp-python`**.
-* **Model Strategy (Dual-Tier GGUF Execution):**
-  - **Tier A Model (Fast Extraction & Ingestion):**
-    - Candidates: *Qwen 2.5 3B/7B Instruct (Q4_K_M or Q8_0 GGUF)* or *Gemma 2 2B/9B GGUF*.
-    - Usage: Intent classification, entity extraction, parameter sanitation.
-    - Latency: Sub-100ms first-token response on modern CPU/GPU.
-  - **Tier B Model (Complex Reasoning & Planning):**
-    - Candidates: *Qwen 2.5 14B / 32B Instruct (Q4_K_M GGUF)* or *Llama 3.1 8B Instruct (Q8_0 GGUF)*.
-    - Usage: Complex multi-step DAG planning, conflict resolution tradeoffs, drafting communications.
+* **Model Strategy (Apple Silicon Metal C++ Acceleration):**
+  - **Hardware Profile:** Optimized for 16 GB Apple Silicon unified memory with Metal Performance Shaders (`n_gpu_layers = -1`).
+  - **Tier A Model (Fast Intent & Extraction):**
+    - Target: *Qwen 2.5 3B Instruct (Q8_0 GGUF)* or *Llama 3.2 3B Instruct (Q4_K_M GGUF)* (~2.2–3.8 GB).
+    - Usage: Intent taxonomy classification, entity extraction, parameter sanitation.
+    - Performance: Sub-50ms first-token latency with 65–85 tokens/sec generation on Metal.
+  - **Tier B Model (Planning & Reasoning DAG):**
+    - Target: *Qwen 2.5 3B Instruct (Q8_0 GGUF)* or *Qwen 2.5 7B Instruct (Q4_K_M GGUF)* (~3.8–4.6 GB).
+    - Usage: Multi-step DAG planning, conflict resolution tradeoffs, drafting communication.
+    - Efficiency: Leaves 11+ GB of unified memory completely free for Docker (Supabase), Next.js dev server, and macOS.
 * **Guaranteed Structured Output:**
-  - Employs **GBNF Grammars** (Grammar-Based Constrained Decoding) ensuring that model generation literally cannot produce invalid JSON. Every output strictly adheres to the requested Pydantic schema.
+  - Employs **GBNF Grammars & Pydantic Schemas** ensuring that model generation strictly adheres to valid JSON for deterministic execution.
 
 ### Layer 5: Reasoning Engine
 * **Role:** Contextual evaluation of intents against active constraints before generating actions.
@@ -252,13 +254,14 @@ To guarantee reliable local execution across various development workstations, t
   - **Apple Silicon:** Metal Performance Shaders (`n_gpu_layers = -1`).
   - **x86 CPU Fallback:** AVX2 / AVX-512 vectorization with multi-threading.
 
-### 5.2 Quantization & Model Storage Matrix
+### 5.2 Quantization & Model Storage Matrix (Apple Silicon Optimized)
 
-| Role | Recommended Model | Quantization Format | RAM / VRAM Req. | Purpose |
-| :--- | :--- | :--- | :--- | :--- |
-| **Tier A (Fast Ingest)** | Qwen 2.5 3B Instruct | `qwen2.5-3b-instruct-q8_0.gguf` | ~3.8 GB | Intent routing, parameter parsing, entity extraction |
-| **Tier B (Reasoning)** | Qwen 2.5 14B Instruct | `qwen2.5-14b-instruct-q4_k_m.gguf` | ~9.2 GB | Multi-step DAG planning, conflict resolution tradeoffs |
-| **Ultra-Light Fallback** | Gemma 2 2B Instruct | `gemma-2-2b-it-q4_k_m.gguf` | ~1.8 GB | Low-memory laptop development fallback |
+| Role | Recommended Model | Quantization Format | RAM / VRAM Req. | Speed on Metal | Purpose |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Primary Production (3B/4B)** | Qwen 2.5 3B Instruct | `qwen2.5-3b-instruct-q8_0.gguf` | ~3.8 GB | ~75 tokens/s | Intent parsing, multi-step DAG planning, entity extraction |
+| **Ultra-Fast Alternative** | Llama 3.2 3B Instruct | `llama-3.2-3b-instruct-q4_k_m.gguf` | ~2.2 GB | ~85 tokens/s | Ultra-low latency routing & parameter sanitation |
+| **High-Precision Tier (7B)** | Qwen 2.5 7B Instruct | `qwen2.5-7b-instruct-q4_k_m.gguf` | ~4.6 GB | ~45 tokens/s | Deep reasoning & nuanced communication synthesis |
+| **Ultra-Light Fallback** | Gemma 2 2B Instruct | `gemma-2-2b-it-q4_k_m.gguf` | ~1.8 GB | ~95 tokens/s | Minimal memory fallback |
 
 ### 5.3 Deterministic Output via GBNF Grammars
 To eliminate JSON decoding errors completely, models are invoked with GBNF (GGML BNF) grammar schemas derived directly from Pydantic models. The C++ sampler physically restricts token generation to valid schema characters.

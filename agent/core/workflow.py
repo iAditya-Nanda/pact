@@ -72,7 +72,7 @@ class WorkflowEngine:
 
         if intent.requires_clarification:
             return {
-                "intent": intent.model_dump(),
+                "intent": intent.model_dump(mode="json"),
                 "requires_clarification": True,
                 "clarification_prompt": intent.clarification_prompt,
                 "status": "CLARIFICATION_NEEDED",
@@ -80,7 +80,7 @@ class WorkflowEngine:
             }
 
         return {
-            "intent": intent.model_dump(),
+            "intent": intent.model_dump(mode="json"),
             "requires_clarification": False,
             "status": "PLANNING",
         }
@@ -99,7 +99,7 @@ class WorkflowEngine:
 
         return {
             "run_id": run_id,
-            "plan": plan.model_dump(),
+            "plan": plan.model_dump(mode="json"),
             "status": "EXECUTING",
             "execution_history": [],
             "compensating_log": [],
@@ -133,7 +133,7 @@ class WorkflowEngine:
             # Native LangGraph interrupt halts execution and preserves state
             resume_data = interrupt({
                 "action": "APPROVAL_REQUIRED",
-                "request": approval_req.model_dump(),
+                "request": approval_req.model_dump(mode="json"),
                 "payload_hash": sealed_hash,
             })
 
@@ -166,16 +166,16 @@ class WorkflowEngine:
         history = list(state.get("execution_history", []))
         compensating_log = list(state.get("compensating_log", []))
 
-        history.append(exec_result.model_dump())
+        history.append(exec_result.model_dump(mode="json"))
 
-        if exec_result.data and "compensating_action" in exec_result.data:
+        if exec_result.data and isinstance(exec_result.data, dict) and "compensating_action" in exec_result.data:
             compensating_log.append(exec_result.data["compensating_action"])
 
         if exec_result.status == ToolExecutionStatus.FAILED:
             step.status = StepStatus.FAILED
             step.error = exec_result.error
             return {
-                "plan": plan.model_dump(),
+                "plan": plan.model_dump(mode="json"),
                 "execution_history": history,
                 "compensating_log": compensating_log,
                 "status": "FAILED",
@@ -186,7 +186,7 @@ class WorkflowEngine:
         step.result = exec_result.data
 
         return {
-            "plan": plan.model_dump(),
+            "plan": plan.model_dump(mode="json"),
             "execution_history": history,
             "compensating_log": compensating_log,
             "status": "EXECUTING",

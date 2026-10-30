@@ -130,10 +130,11 @@ export default function DashboardPage() {
     Array<{ sender: "user" | "ai"; text: string }>
   >([]);
 
-  // Modals for Preferences & Settings
+  // Modals for Preferences, Settings & Logout
   const [isPrefModalOpen, setIsPrefModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [editAge, setEditAge] = useState(String(displayAge));
   const [editRole, setEditRole] = useState(displayRole);
   const [editPref, setEditPref] = useState(displayPreference);
@@ -181,7 +182,7 @@ export default function DashboardPage() {
   return (
     <div className="h-screen max-h-screen flex flex-col justify-between overflow-hidden bg-[#f8fafd] select-none text-[#1f1f1f]">
       {/* 1. Header (Clean & Minimal with P.A.C.T. and Big Sign Out Icon) */}
-      <header className="h-16 border-b border-[#e0e3e7] bg-white px-6 lg:px-10 flex items-center justify-between shrink-0">
+      <header className="h-16 border-b border-[#e0e3e7] bg-white px-4 lg:px-6 flex items-center justify-between shrink-0">
         {/* Left Branding */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs">
@@ -192,9 +193,9 @@ export default function DashboardPage() {
           </span>
         </div>
 
-        {/* Right End: Non-chip like, clean prominent icon */}
+        {/* Right End: Non-chip like, clean prominent icon with confirmation modal */}
         <button
-          onClick={logout}
+          onClick={() => setIsLogoutModalOpen(true)}
           className="p-2 rounded-xl text-[#444746] hover:text-[#ba1a1a] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] transition-all cursor-pointer"
           title="Sign Out"
           aria-label="Sign Out"
@@ -204,7 +205,7 @@ export default function DashboardPage() {
       </header>
 
       {/* 2. Main Content Canvas */}
-      <main className="flex-1 flex flex-col justify-between px-6 lg:px-10 py-4 lg:py-5 gap-3.5 lg:gap-4 overflow-y-auto lg:overflow-hidden">
+      <main className="flex-1 flex flex-col justify-between px-4 lg:px-6 py-3.5 lg:py-4 gap-3 lg:gap-3.5 overflow-y-auto lg:overflow-hidden">
         {/* Upper Main Row: 60% Width for 3 Cards + 40% Width for Executive Panel */}
         <div className="flex flex-col lg:flex-row gap-3.5 lg:gap-4 items-stretch flex-1 min-h-0">
           {/* 3 Cards Container (Constrained to 60% Width as Requested) */}
@@ -786,6 +787,47 @@ export default function DashboardPage() {
           <div className="p-3 rounded-xl bg-[#f8fafd] border border-[#e0e3e7]">
             <div className="font-bold text-[#1f1f1f] mb-1">Cryptographic Idempotency</div>
             <div className="text-2xs text-[#747775]">All consequential actions verified with zero duplicate execution.</div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: Custom Sign Out Confirmation */}
+      <Modal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        title="Sign Out of P.A.C.T."
+        maxWidth="sm"
+      >
+        <div className="space-y-4 text-left">
+          <p className="text-xs text-[#444746] leading-relaxed">
+            Are you sure you want to end your active session?
+          </p>
+
+          <div className="p-3 rounded-xl bg-[#f8fafd] border border-[#e0e3e7] text-2xs text-[#747775]">
+            Account: <span className="font-semibold text-[#1f1f1f]">{displayEmail}</span>
+            <div className="mt-1 text-3xs text-[#747775]">
+              Your session will be cleared from this browser. You can sign back in anytime with your Google account.
+            </div>
+          </div>
+
+          <div className="pt-2 flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsLogoutModalOpen(false)}
+              className="px-4 py-2 rounded-full border border-[#e0e3e7] text-xs font-semibold text-[#444746] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogoutModalOpen(false);
+                logout();
+              }}
+              className="px-5 py-2 rounded-full bg-[#ba1a1a] hover:bg-[#93000a] active:bg-[#680003] text-xs font-semibold text-white transition-colors cursor-pointer shadow-xs"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </Modal>

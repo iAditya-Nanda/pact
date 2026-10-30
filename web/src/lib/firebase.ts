@@ -38,7 +38,8 @@ googleProvider.addScope("https://www.googleapis.com/auth/gmail.modify");
 googleProvider.addScope("https://www.googleapis.com/auth/calendar");
 googleProvider.addScope("https://www.googleapis.com/auth/tasks");
 googleProvider.setCustomParameters({
-  prompt: "select_account",
+  prompt: "consent select_account",
+  access_type: "offline",
 });
 
 // Initialize Cloud Firestore

@@ -31,6 +31,7 @@ interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
   loginWithGoogle: () => Promise<void>;
+  connectGoogleWorkspace: () => Promise<string | null>;
   saveOnboardingProfile: (data: {
     fullName: string;
     age: number;
@@ -44,6 +45,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: false,
   loginWithGoogle: async () => {},
+  connectGoogleWorkspace: async () => null,
   saveOnboardingProfile: async () => {},
   logout: async () => {},
 });
@@ -221,6 +223,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const connectGoogleWorkspace = async (): Promise<string | null> => {
+    setIsLoading(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const token = credential?.accessToken;
+
+      if (token) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("pact_google_access_token", token);
+        }
+
+        // Background server token synchronization
+        await fetch("/api/workspace/overview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ googleAccessToken: token }),
+        });
+
+        setUser((prev) => (prev ? { ...prev, googleAccessToken: token } : prev));
+        return token;
+      }
+      return null;
+    } catch (error: any) {
+      console.error("Connect Google Workspace popup error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const saveOnboardingProfile = async (data: {
     fullName: string;
     age: number;
@@ -281,7 +314,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, loginWithGoogle, saveOnboardingProfile, logout }}
+      value={{
+        user,
+        isLoading,
+        loginWithGoogle,
+        connectGoogleWorkspace,
+        saveOnboardingProfile,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 export default function DashboardPage() {
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading, logout, connectGoogleWorkspace } = useAuth();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
@@ -182,11 +182,22 @@ export default function DashboardPage() {
   const [workspace, setWorkspace] = useState<any>(null);
   const [isApproving, setIsApproving] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
 
-  // Fetch full workspace state from backend API
+  // Fetch full workspace state from backend API (with live Google token)
   const refreshWorkspace = async () => {
     try {
-      const res = await fetch("/api/workspace/overview");
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("pact_google_access_token")
+          : null;
+
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const res = await fetch("/api/workspace/overview", { headers });
       if (res.ok) {
         const data = await res.json();
         setWorkspace(data);
@@ -205,6 +216,55 @@ export default function DashboardPage() {
   useEffect(() => {
     refreshWorkspace();
   }, []);
+
+  const [manualToken, setManualToken] = useState("");
+  const [tokenSyncStatus, setTokenSyncStatus] = useState<string | null>(null);
+
+  // Connect / Re-authenticate Google Workspace services with live scopes
+  const handleConnectGoogleServices = async () => {
+    setIsConnectingGoogle(true);
+    setTokenSyncStatus(null);
+    try {
+      const token = await connectGoogleWorkspace();
+      if (token) {
+        await refreshWorkspace();
+      }
+    } catch (err: any) {
+      console.error("Failed to connect live Google Workspace services:", err);
+      setTokenSyncStatus(`Connection error: ${err?.message || "Popup closed or cancelled"}`);
+    } finally {
+      setIsConnectingGoogle(false);
+    }
+  };
+
+  // Direct manual OAuth token sync (for development or direct token entry)
+  const handleSaveManualToken = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const token = manualToken.trim();
+    if (!token) return;
+    setIsConnectingGoogle(true);
+    setTokenSyncStatus("Validating token...");
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pact_google_access_token", token);
+      }
+      const res = await fetch("/api/workspace/overview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ googleAccessToken: token }),
+      });
+      if (res.ok) {
+        await refreshWorkspace();
+        setTokenSyncStatus("Token synchronized successfully! Live workspace refreshed.");
+      } else {
+        setTokenSyncStatus("Failed to synchronize token with server.");
+      }
+    } catch (err: any) {
+      setTokenSyncStatus(`Sync error: ${err?.message || "Failed"}`);
+    } finally {
+      setIsConnectingGoogle(false);
+    }
+  };
 
   // Sync Call on Mobile toggle with backend API
   const handleToggleMobileNotify = async () => {
@@ -345,6 +405,33 @@ export default function DashboardPage() {
               - Proactive Agent for Coordinated Tasks
             </span>
           </div>
+
+          {/* Live Data Badge / Re-auth Trigger */}
+          {workspace?.isLiveGoogleData ? (
+            <div className="ml-2 hidden md:inline-flex items-center gap-2">
+              <span className="px-2.5 py-1 rounded-full bg-[#e6f4ea] dark:bg-[#0f5223] text-[#137333] dark:text-[#81c995] text-2xs font-bold border border-[#ceead6] dark:border-[#137333] inline-flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#1e8e3e] animate-pulse" />
+                <span>Live Google Workspace Connected</span>
+              </span>
+              <button
+                onClick={refreshWorkspace}
+                className="p-1 rounded-lg text-[#747775] hover:text-[#0b57d0] dark:hover:text-[#a8c7fa] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] transition-colors cursor-pointer"
+                title="Refresh Live Google Data"
+              >
+                <Clock className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleConnectGoogleServices}
+              disabled={isConnectingGoogle}
+              className="ml-2 px-3 py-1.5 rounded-xl bg-[#0b57d0] hover:bg-[#0842a0] text-white text-2xs font-bold shadow-2xs transition-all cursor-pointer hidden md:inline-flex items-center gap-1.5"
+              title="Authorize real Gmail, Google Calendar, and Google Tasks"
+            >
+              <Zap className="w-3 h-3" />
+              <span>{isConnectingGoogle ? "Connecting Google..." : "Connect Google Workspace"}</span>
+            </button>
+          )}
         </div>
 
         {/* Right End: Non-chip like, clean prominent icon with confirmation modal */}
@@ -357,6 +444,26 @@ export default function DashboardPage() {
           <LogOut className="w-5 h-5" />
         </button>
       </header>
+
+      {/* Banner: Action Required when Google Workspace is not live */}
+      {!workspace?.isLiveGoogleData && mounted && (
+        <div className="mx-4 lg:mx-6 mt-3 px-4 py-2.5 rounded-2xl bg-[#fef7e0] dark:bg-[#2b2413] border border-[#f9ab00]/60 dark:border-[#f29900]/60 flex items-center justify-between shadow-xs shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-[#f9ab00] animate-ping shrink-0" />
+            <span className="text-xs font-medium text-[#7c4a00] dark:text-[#fdd663] truncate">
+              Live Google Workspace is awaiting authorization. Connect your Google account to fetch real Gmail, Calendar, and Tasks.
+            </span>
+          </div>
+          <button
+            onClick={handleConnectGoogleServices}
+            disabled={isConnectingGoogle}
+            className="ml-3 px-3.5 py-1.5 rounded-xl bg-[#0b57d0] hover:bg-[#0842a0] text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>{isConnectingGoogle ? "Connecting Google..." : "Connect Google Workspace"}</span>
+          </button>
+        </div>
+      )}
 
       {/* 2. Main Content Canvas */}
       <main className="flex-1 flex flex-col justify-between px-4 lg:px-6 py-3.5 lg:py-4 gap-3 lg:gap-3.5 overflow-y-auto lg:overflow-hidden">
@@ -379,19 +486,25 @@ export default function DashboardPage() {
                       Gmail Insights &amp; Info
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-2xs font-medium text-[#747775] dark:text-[#8e9099] shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#EA4335]" />
-                    <span>Inbox</span>
+                  <div className="flex items-center gap-1.5 text-2xs font-medium shrink-0">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        workspace?.isLiveGoogleData ? "bg-[#1e8e3e]" : "bg-[#EA4335]"
+                      }`}
+                    />
+                    <span className="text-[#747775] dark:text-[#8e9099]">
+                      {workspace?.isLiveGoogleData ? "Gmail Live" : "Auth Required"}
+                    </span>
                   </div>
                 </div>
 
                 {/* Big Number in a Card Background with Center-aligned Below Font */}
                 <div className="my-3 bg-[#f8fafd] dark:bg-[#282a2f] p-3.5 rounded-2xl border border-[#e0e3e7]/80 dark:border-[#34373d] text-center shadow-2xs">
                   <div className="text-3xl lg:text-4xl font-extrabold text-[#1f1f1f] dark:text-white tracking-tight">
-                    {workspace?.metrics?.unreadEmails ?? 14}
+                    {workspace?.isLiveGoogleData ? (workspace?.metrics?.unreadEmails ?? 0) : "—"}
                   </div>
                   <div className="text-xs font-medium text-[#747775] dark:text-[#8e9099] text-center mt-1">
-                    Unread priority emails
+                    {workspace?.isLiveGoogleData ? "Unread priority emails" : "Connect Google to load live inbox"}
                   </div>
                 </div>
 
@@ -400,36 +513,65 @@ export default function DashboardPage() {
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">This month</span>
                     <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">
-                      {workspace?.metrics?.emailsThisMonth ?? 342}
+                      {workspace?.isLiveGoogleData ? (workspace?.metrics?.emailsThisMonth ?? 0) : "—"}
                     </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">Important</span>
                     <span className="text-xs font-bold text-[#ba1a1a] dark:text-[#ff897d]">
-                      {workspace?.metrics?.emailsImportant ?? 4}
+                      {workspace?.isLiveGoogleData ? (workspace?.metrics?.emailsImportant ?? 0) : "—"}
                     </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex flex-col justify-center">
-                    <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
-                      {workspace?.latestEmail?.sender ? `Latest: ${workspace.latestEmail.sender}` : "Latest: Sarah Lin (VP Eng)"}
-                    </div>
-                    <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
-                      {workspace?.latestEmail?.subject || "Q4 Architecture Review Agenda"}
-                    </div>
+                    {workspace?.isLiveGoogleData ? (
+                      <>
+                        <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
+                          {workspace?.latestEmail?.sender ? `Latest: ${workspace.latestEmail.sender}` : "Latest: No new emails"}
+                        </div>
+                        <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
+                          {workspace?.latestEmail?.subject || "Inbox is clean"}
+                        </div>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleConnectGoogleServices}
+                        disabled={isConnectingGoogle}
+                        className="text-left group/btn cursor-pointer"
+                      >
+                        <div className="text-xs font-semibold text-[#0b57d0] dark:text-[#a8c7fa] group-hover/btn:underline flex items-center justify-between">
+                          <span>{isConnectingGoogle ? "Connecting Google..." : "Connect Live Gmail"}</span>
+                          <span>→</span>
+                        </div>
+                        <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
+                          Authorize real-time inbox stream
+                        </div>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Bottom Button (Icon moved upstairs, clean action) */}
-              <a
-                href="https://mail.google.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
-              >
-                <span>Open Gmail</span>
-                <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
-              </a>
+              {/* Bottom Button */}
+              {workspace?.isLiveGoogleData ? (
+                <a
+                  href="https://mail.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
+                >
+                  <span>Open Gmail</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
+                </a>
+              ) : (
+                <button
+                  onClick={handleConnectGoogleServices}
+                  disabled={isConnectingGoogle}
+                  className="w-full mt-3 rounded-xl border border-[#0b57d0]/30 bg-[#0b57d0]/10 hover:bg-[#0b57d0]/20 dark:bg-[#a8c7fa]/10 dark:hover:bg-[#a8c7fa]/20 py-2 px-3 font-semibold text-xs text-[#0b57d0] dark:text-[#a8c7fa] flex items-center justify-between shadow-2xs transition-all cursor-pointer"
+                >
+                  <span>{isConnectingGoogle ? "Connecting..." : "Connect Gmail"}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
+                </button>
+              )}
             </div>
 
             {/* Column 2: Calendar Insights & Info */}
@@ -447,19 +589,25 @@ export default function DashboardPage() {
                       Calendar Insights &amp; Info
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-2xs font-medium text-[#747775] dark:text-[#8e9099] shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#4285F4]" />
-                    <span>Schedule</span>
+                  <div className="flex items-center gap-1.5 text-2xs font-medium shrink-0">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        workspace?.isLiveGoogleData ? "bg-[#1e8e3e]" : "bg-[#4285F4]"
+                      }`}
+                    />
+                    <span className="text-[#747775] dark:text-[#8e9099]">
+                      {workspace?.isLiveGoogleData ? "Calendar Live" : "Auth Required"}
+                    </span>
                   </div>
                 </div>
 
                 {/* Big Number in a Card Background with Center-aligned Below Font */}
                 <div className="my-3 bg-[#f8fafd] dark:bg-[#282a2f] p-3.5 rounded-2xl border border-[#e0e3e7]/80 dark:border-[#34373d] text-center shadow-2xs">
                   <div className="text-3xl lg:text-4xl font-extrabold text-[#1f1f1f] dark:text-white tracking-tight">
-                    {workspace?.metrics?.meetingsToday ?? 3}
+                    {workspace?.isLiveGoogleData ? (workspace?.metrics?.meetingsToday ?? 0) : "—"}
                   </div>
                   <div className="text-xs font-medium text-[#747775] dark:text-[#8e9099] text-center mt-1">
-                    Meetings scheduled today
+                    {workspace?.isLiveGoogleData ? "Meetings scheduled today" : "Connect Google to load live calendar"}
                   </div>
                 </div>
 
@@ -468,36 +616,65 @@ export default function DashboardPage() {
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">This week</span>
                     <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">
-                      {workspace?.metrics?.thisWeekHours ?? "18.5h"}
+                      {workspace?.isLiveGoogleData ? (workspace?.metrics?.thisWeekHours ?? "0h") : "—"}
                     </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">Conflicts</span>
                     <span className="text-xs font-bold text-[#1e8e3e] dark:text-[#81c995]">
-                      {workspace?.metrics?.conflicts ?? 0} Protected
+                      {workspace?.isLiveGoogleData ? `${workspace?.metrics?.conflicts ?? 0} Protected` : "—"}
                     </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex flex-col justify-center">
-                    <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
-                      {workspace?.nextMeeting?.title ? `Next: ${workspace.nextMeeting.title}` : "Next: Executive Sync"}
-                    </div>
-                    <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
-                      {workspace?.nextMeeting?.time || "11:30 AM • Google Meet"}
-                    </div>
+                    {workspace?.isLiveGoogleData ? (
+                      <>
+                        <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
+                          {workspace?.nextMeeting?.title ? `Next: ${workspace.nextMeeting.title}` : "Next: Calendar clear"}
+                        </div>
+                        <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
+                          {workspace?.nextMeeting?.time || "No upcoming meetings"}
+                        </div>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleConnectGoogleServices}
+                        disabled={isConnectingGoogle}
+                        className="text-left group/btn cursor-pointer"
+                      >
+                        <div className="text-xs font-semibold text-[#0b57d0] dark:text-[#a8c7fa] group-hover/btn:underline flex items-center justify-between">
+                          <span>{isConnectingGoogle ? "Connecting Google..." : "Connect Google Calendar"}</span>
+                          <span>→</span>
+                        </div>
+                        <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
+                          Authorize real-time schedule stream
+                        </div>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Bottom Button (Icon moved upstairs, clean action) */}
-              <a
-                href="https://calendar.google.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
-              >
-                <span>Open Calendar</span>
-                <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
-              </a>
+              {/* Bottom Button */}
+              {workspace?.isLiveGoogleData ? (
+                <a
+                  href="https://calendar.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
+                >
+                  <span>Open Calendar</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
+                </a>
+              ) : (
+                <button
+                  onClick={handleConnectGoogleServices}
+                  disabled={isConnectingGoogle}
+                  className="w-full mt-3 rounded-xl border border-[#0b57d0]/30 bg-[#0b57d0]/10 hover:bg-[#0b57d0]/20 dark:bg-[#a8c7fa]/10 dark:hover:bg-[#a8c7fa]/20 py-2 px-3 font-semibold text-xs text-[#0b57d0] dark:text-[#a8c7fa] flex items-center justify-between shadow-2xs transition-all cursor-pointer"
+                >
+                  <span>{isConnectingGoogle ? "Connecting..." : "Connect Calendar"}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
+                </button>
+              )}
             </div>
 
             {/* Column 3: Tasks Insights & Info */}
@@ -515,19 +692,25 @@ export default function DashboardPage() {
                       Tasks Insights &amp; Info
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-2xs font-medium text-[#747775] dark:text-[#8e9099] shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#34A853]" />
-                    <span>Tasks</span>
+                  <div className="flex items-center gap-1.5 text-2xs font-medium shrink-0">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        workspace?.isLiveGoogleData ? "bg-[#1e8e3e]" : "bg-[#34A853]"
+                      }`}
+                    />
+                    <span className="text-[#747775] dark:text-[#8e9099]">
+                      {workspace?.isLiveGoogleData ? "Tasks Live" : "Auth Required"}
+                    </span>
                   </div>
                 </div>
 
                 {/* Big Number in a Card Background with Center-aligned Below Font */}
                 <div className="my-3 bg-[#f8fafd] dark:bg-[#282a2f] p-3.5 rounded-2xl border border-[#e0e3e7]/80 dark:border-[#34373d] text-center shadow-2xs">
                   <div className="text-3xl lg:text-4xl font-extrabold text-[#1f1f1f] dark:text-white tracking-tight">
-                    {workspace?.metrics?.activeTasks ?? 8}
+                    {workspace?.isLiveGoogleData ? (workspace?.metrics?.activeTasks ?? 0) : "—"}
                   </div>
                   <div className="text-xs font-medium text-[#747775] dark:text-[#8e9099] text-center mt-1">
-                    Active tasks pending
+                    {workspace?.isLiveGoogleData ? "Active tasks pending" : "Connect Google to load live queue"}
                   </div>
                 </div>
 
@@ -536,36 +719,65 @@ export default function DashboardPage() {
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">Due today</span>
                     <span className="text-xs font-bold text-[#e65100] dark:text-[#ffb77d]">
-                      {workspace?.metrics?.dueToday ?? 2} Urgent
+                      {workspace?.isLiveGoogleData ? `${workspace?.metrics?.dueToday ?? 0} Urgent` : "—"}
                     </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">Overdue</span>
                     <span className="text-xs font-bold text-[#1e8e3e] dark:text-[#81c995]">
-                      {workspace?.metrics?.overdue ?? 0} On track
+                      {workspace?.isLiveGoogleData ? `${workspace?.metrics?.overdue ?? 0} On track` : "—"}
                     </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex flex-col justify-center">
-                    <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
-                      {workspace?.topAction?.title || "Top Action: Security"}
-                    </div>
-                    <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
-                      {workspace?.topAction?.description || "Token rotation protocol"}
-                    </div>
+                    {workspace?.isLiveGoogleData ? (
+                      <>
+                        <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
+                          {workspace?.topAction?.title || "Top Task"}
+                        </div>
+                        <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
+                          {workspace?.topAction?.description || "All tasks completed"}
+                        </div>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleConnectGoogleServices}
+                        disabled={isConnectingGoogle}
+                        className="text-left group/btn cursor-pointer"
+                      >
+                        <div className="text-xs font-semibold text-[#0b57d0] dark:text-[#a8c7fa] group-hover/btn:underline flex items-center justify-between">
+                          <span>{isConnectingGoogle ? "Connecting Google..." : "Connect Google Tasks"}</span>
+                          <span>→</span>
+                        </div>
+                        <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
+                          Authorize real-time tasks queue
+                        </div>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Bottom Button (Icon moved upstairs, clean action) */}
-              <a
-                href="https://tasks.google.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
-              >
-                <span>Open Tasks</span>
-                <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
-              </a>
+              {/* Bottom Button */}
+              {workspace?.isLiveGoogleData ? (
+                <a
+                  href="https://tasks.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
+                >
+                  <span>Open Tasks</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
+                </a>
+              ) : (
+                <button
+                  onClick={handleConnectGoogleServices}
+                  disabled={isConnectingGoogle}
+                  className="w-full mt-3 rounded-xl border border-[#0b57d0]/30 bg-[#0b57d0]/10 hover:bg-[#0b57d0]/20 dark:bg-[#a8c7fa]/10 dark:hover:bg-[#a8c7fa]/20 py-2 px-3 font-semibold text-xs text-[#0b57d0] dark:text-[#a8c7fa] flex items-center justify-between shadow-2xs transition-all cursor-pointer"
+                >
+                  <span>{isConnectingGoogle ? "Connecting..." : "Connect Tasks"}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -756,7 +968,11 @@ export default function DashboardPage() {
             </span>
             <div className="flex items-center gap-2">
               {/* Gmail Icon */}
-              <div className="relative group cursor-pointer" title="Gmail: Connected & Synchronized">
+              <div
+                onClick={() => setIsConnectModalOpen(true)}
+                className="relative group cursor-pointer"
+                title={workspace?.isLiveGoogleData ? "Gmail: Live & Synchronized" : "Gmail: Click to Authorize"}
+              >
                 <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
                   <img
                     src="/icons/gmail.png"
@@ -764,11 +980,19 @@ export default function DashboardPage() {
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#34A853] border-2 border-white dark:border-[#1d1f24]" />
+                <span
+                  className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#1d1f24] ${
+                    workspace?.isLiveGoogleData ? "bg-[#34A853]" : "bg-[#FBBC04]"
+                  }`}
+                />
               </div>
 
               {/* Calendar Icon */}
-              <div className="relative group cursor-pointer" title="Google Calendar: Connected & Synchronized">
+              <div
+                onClick={() => setIsConnectModalOpen(true)}
+                className="relative group cursor-pointer"
+                title={workspace?.isLiveGoogleData ? "Google Calendar: Live & Synchronized" : "Google Calendar: Click to Authorize"}
+              >
                 <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
                   <img
                     src="/icons/calendar.png"
@@ -776,11 +1000,19 @@ export default function DashboardPage() {
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#34A853] border-2 border-white dark:border-[#1d1f24]" />
+                <span
+                  className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#1d1f24] ${
+                    workspace?.isLiveGoogleData ? "bg-[#34A853]" : "bg-[#FBBC04]"
+                  }`}
+                />
               </div>
 
               {/* Tasks Icon */}
-              <div className="relative group cursor-pointer" title="Google Tasks: Connected & Synchronized">
+              <div
+                onClick={() => setIsConnectModalOpen(true)}
+                className="relative group cursor-pointer"
+                title={workspace?.isLiveGoogleData ? "Google Tasks: Live & Synchronized" : "Google Tasks: Click to Authorize"}
+              >
                 <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
                   <img
                     src="/icons/tasks.svg"
@@ -788,7 +1020,11 @@ export default function DashboardPage() {
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#34A853] border-2 border-white dark:border-[#1d1f24]" />
+                <span
+                  className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#1d1f24] ${
+                    workspace?.isLiveGoogleData ? "bg-[#34A853]" : "bg-[#FBBC04]"
+                  }`}
+                />
               </div>
 
               {/* Plus Button to Connect More Apps */}
@@ -920,23 +1156,99 @@ export default function DashboardPage() {
       <Modal
         isOpen={isConnectModalOpen}
         onClose={() => setIsConnectModalOpen(false)}
-        title="Connect Enterprise Applications"
+        title="Connect Workspace &amp; Integrations"
       >
-        <div className="space-y-3 text-left">
-          <p className="text-xs text-[#444746] dark:text-[#c4c6cf] leading-relaxed">
-            Expand PACT cross-app orchestration with additional authorized integrations:
-          </p>
-          <div className="space-y-2">
-            <div className="p-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] flex items-center justify-between bg-[#f8fafd] dark:bg-[#282a2f]">
+        <div className="space-y-4 text-left">
+          {/* Google Workspace Core Integration */}
+          <div className="p-3.5 rounded-2xl border border-[#0b57d0]/30 dark:border-[#a8c7fa]/30 bg-[#f8fafd] dark:bg-[#1e222b]">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#e0e3e7] dark:border-[#34373d]">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center -space-x-1">
+                  <img src="/icons/gmail.png" alt="Gmail" className="w-4 h-4 object-contain" />
+                  <img src="/icons/calendar.png" alt="Calendar" className="w-4 h-4 object-contain" />
+                  <img src="/icons/tasks.svg" alt="Tasks" className="w-4 h-4 object-contain" />
+                </div>
+                <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">
+                  Google Workspace (Gmail, Calendar, Tasks)
+                </span>
+              </div>
+              <span
+                className={`text-3xs font-semibold px-2 py-0.5 rounded-full ${
+                  workspace?.isLiveGoogleData
+                    ? "bg-[#e6f4ea] dark:bg-[#0f5223] text-[#137333] dark:text-[#81c995]"
+                    : "bg-[#fef7e0] dark:bg-[#332a00] text-[#7c4a00] dark:text-[#fdd663]"
+                }`}
+              >
+                {workspace?.isLiveGoogleData ? "Live Connected" : "Action Required"}
+              </span>
+            </div>
+
+            <p className="text-2xs text-[#747775] dark:text-[#8e9099] leading-relaxed mb-3">
+              Stream live emails, calendar conflicts, and tasks directly into PACT with bidirectional clearance.
+            </p>
+
+            <button
+              onClick={handleConnectGoogleServices}
+              disabled={isConnectingGoogle}
+              className="w-full py-2 px-3 rounded-xl bg-[#0b57d0] hover:bg-[#0842a0] text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>
+                {isConnectingGoogle
+                  ? "Authorizing Google Account..."
+                  : workspace?.isLiveGoogleData
+                  ? "Re-authorize Google Workspace"
+                  : "Authorize Google Workspace (1-Click Popup)"}
+              </span>
+            </button>
+          </div>
+
+          {/* Manual OAuth Access Token Form */}
+          <form
+            onSubmit={handleSaveManualToken}
+            className="p-3.5 rounded-2xl border border-[#e0e3e7] dark:border-[#34373d] bg-[#f8fafd] dark:bg-[#282a2f] space-y-2"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-2xs font-bold text-[#747775] dark:text-[#8e9099] uppercase tracking-wider">
+                Direct OAuth Access Token
+              </span>
+              <span className="text-3xs text-[#747775] dark:text-[#8e9099]">Bearer ya29...</span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={manualToken}
+                onChange={(e) => setManualToken(e.target.value)}
+                placeholder="Paste Google OAuth access token here..."
+                className="flex-1 px-3 py-1.5 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] text-xs text-[#1f1f1f] dark:text-white placeholder-[#747775] focus:outline-none focus:ring-1 focus:ring-[#0b57d0]"
+              />
+              <button
+                type="submit"
+                disabled={!manualToken.trim() || isConnectingGoogle}
+                className="px-3.5 py-1.5 rounded-xl bg-[#1e8e3e] hover:bg-[#137333] text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-40"
+              >
+                Sync
+              </button>
+            </div>
+            {tokenSyncStatus && (
+              <div className="text-2xs font-medium text-[#0b57d0] dark:text-[#a8c7fa] pt-1">
+                {tokenSyncStatus}
+              </div>
+            )}
+          </form>
+
+          {/* Additional enterprise integrations */}
+          <div className="space-y-2 pt-1">
+            <div className="p-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] flex items-center justify-between bg-white dark:bg-[#1d1f24]">
               <div>
-                <div className="text-xs font-bold text-[#1f1f1f] dark:text-white">Slack Workspaces</div>
+                <div className="text-xs font-bold text-[#1f1f1f] dark:text-white">Slack Enterprise</div>
                 <div className="text-2xs text-[#747775] dark:text-[#8e9099]">Channel alerts &amp; urgent mentions</div>
               </div>
               <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-[#d3e3fd] dark:bg-[#004a77] text-[#041e49] dark:text-[#a8c7fa]">
                 Coming Soon
               </span>
             </div>
-            <div className="p-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] flex items-center justify-between bg-[#f8fafd] dark:bg-[#282a2f]">
+            <div className="p-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] flex items-center justify-between bg-white dark:bg-[#1d1f24]">
               <div>
                 <div className="text-xs font-bold text-[#1f1f1f] dark:text-white">WhatsApp Business / SMS</div>
                 <div className="text-2xs text-[#747775] dark:text-[#8e9099]">Executive VIP emergency escalation</div>

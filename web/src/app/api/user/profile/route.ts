@@ -69,7 +69,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, email, fullName, avatarUrl, role, age, schedulePreference } = body;
+    const { id, email, fullName, avatarUrl, role, age, schedulePreference, googleAccessToken } = body;
 
     const userId = id || `usr_${Date.now()}`;
     const users = readUsers();
@@ -82,6 +82,7 @@ export async function POST(request: Request) {
       role: role || "Lead Architect",
       age: age ? Number(age) : 24,
       schedulePreference: schedulePreference || "Avoid meetings before 10:00 AM",
+      googleAccessToken: googleAccessToken || users[userId]?.googleAccessToken || "",
       updatedAt: new Date().toISOString(),
       createdAt: users[userId]?.createdAt || new Date().toISOString(),
     };

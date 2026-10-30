@@ -35,7 +35,7 @@ export default function DashboardPage() {
       if (stored) {
         try {
           setLocalCache(JSON.parse(stored));
-        } catch {}
+        } catch { }
       }
     }
   }, [user]);
@@ -367,7 +367,7 @@ export default function DashboardPage() {
           {/* Right Executive Panel & Quick Actions (40% Width) */}
           <div className="w-full lg:w-[40%] flex flex-col justify-between gap-3 lg:gap-3.5 min-h-0">
             {/* User Profile Card + Dynamic Greeting + IST Timer (Clean white, 120px avatar) */}
-            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4 shadow-xs">
+            <div className="bg-none p-4">
               <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-5">
                 {/* 120px Google Avatar Circle */}
                 <div className="relative shrink-0">
@@ -392,19 +392,19 @@ export default function DashboardPage() {
                 </div>
 
                 {/* User Info & Greetings */}
-                <div className="min-w-0 flex-1 flex flex-col justify-center text-center sm:text-left">
-                  {/* Big Dynamic Greeting */}
-                  <div className="text-base lg:text-lg font-bold text-[#747775] leading-tight">
-                    {greeting},
-                  </div>
-
-                  {/* Big Name */}
-                  <div className="text-xl lg:text-2xl font-black text-[#1f1f1f] tracking-tight leading-tight mt-0.5 truncate">
-                    {displayName}
+                <div className="min-w-0 flex-1 flex flex-col justify-center text-left">
+                  {/* Dynamic Greeting & User Name in Same Line, Left-Aligned with Space After Comma */}
+                  <div className="flex items-baseline gap-1.5 text-left truncate">
+                    <span className="text-base lg:text-lg font-bold text-[#747775] shrink-0">
+                      {greeting},
+                    </span>
+                    <span className="text-xl lg:text-2xl font-black text-[#1f1f1f] tracking-tight truncate">
+                      {displayName}
+                    </span>
                   </div>
 
                   {/* Small Role & Age */}
-                  <div className="flex items-center justify-center sm:justify-start gap-2 mt-1.5">
+                  <div className="flex items-center justify-start gap-2 mt-1.5 text-left">
                     <span className="px-2 py-0.5 rounded-full bg-[#f0f4f9] border border-[#e0e3e7] text-xs font-bold text-[#0b57d0]">
                       {displayRole}
                     </span>
@@ -414,12 +414,12 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Small Email */}
-                  <div className="text-xs text-[#747775] truncate mt-1">
+                  <div className="text-xs text-[#747775] truncate mt-1 text-left">
                     {displayEmail}
                   </div>
 
                   {/* Live IST Timer with Seconds */}
-                  <div className="mt-2.5 flex items-center justify-center sm:justify-start">
+                  <div className="mt-2.5 flex items-center justify-start text-left">
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#f0f4f9] border border-[#e0e3e7] font-mono text-2xs font-bold text-[#1f1f1f]">
                       <Clock className="w-3 h-3 text-[#0b57d0]" />
                       <span>{mounted && istTime ? istTime : "IST Active"}</span>
@@ -430,7 +430,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Quick Actions & AI Recommendations Card (Compact & Balanced) */}
-            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-3.5 shadow-xs flex-1 flex flex-col justify-between">
+            <div className="border border-[#e0e3e7] rounded-2xl bg-none p-3.5 shadow-xs flex-1 flex flex-col justify-between">
               {/* Top: AI Recommendation Header & Body */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -470,15 +470,13 @@ export default function DashboardPage() {
                     role="switch"
                     aria-checked={mobileNotify}
                     onClick={() => setMobileNotify(!mobileNotify)}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      mobileNotify ? "bg-[#1e8e3e]" : "bg-[#c4c7c5]"
-                    }`}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${mobileNotify ? "bg-[#1e8e3e]" : "bg-[#c4c7c5]"
+                      }`}
                     title="Toggle Call on Mobile"
                   >
                     <span
-                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
-                        mobileNotify ? "translate-x-4" : "translate-x-0"
-                      }`}
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${mobileNotify ? "translate-x-4" : "translate-x-0"
+                        }`}
                     />
                   </button>
                 </div>
@@ -499,11 +497,10 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setAiMode("safe")}
-                    className={`py-1.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer ${
-                      aiMode === "safe"
-                        ? "bg-[#e8f0fe] border-[#0b57d0] text-[#0b57d0] shadow-2xs"
-                        : "bg-[#f8fafd] border-[#e0e3e7] text-[#444746] hover:bg-[#f0f4f9]"
-                    }`}
+                    className={`py-1.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer ${aiMode === "safe"
+                      ? "bg-[#e8f0fe] border-[#0b57d0] text-[#0b57d0] shadow-2xs"
+                      : "bg-[#f8fafd] border-[#e0e3e7] text-[#444746] hover:bg-[#f0f4f9]"
+                      }`}
                   >
                     <div className="flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3" />
@@ -514,11 +511,10 @@ export default function DashboardPage() {
 
                   <button
                     onClick={() => setAiMode("turbo")}
-                    className={`py-1.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer ${
-                      aiMode === "turbo"
-                        ? "bg-[#fff3e0] border-[#e65100] text-[#e65100] shadow-2xs"
-                        : "bg-[#f8fafd] border-[#e0e3e7] text-[#444746] hover:bg-[#f0f4f9]"
-                    }`}
+                    className={`py-1.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer ${aiMode === "turbo"
+                      ? "bg-[#fff3e0] border-[#e65100] text-[#e65100] shadow-2xs"
+                      : "bg-[#f8fafd] border-[#e0e3e7] text-[#444746] hover:bg-[#f0f4f9]"
+                      }`}
                   >
                     <div className="flex items-center gap-1">
                       <Zap className="w-3 h-3" />

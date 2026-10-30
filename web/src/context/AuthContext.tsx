@@ -78,6 +78,19 @@ async function safeFirestoreSync(userId: string, data: Partial<UserProfile>) {
   }
 }
 
+// Safe background server API sync
+async function syncProfileToBackend(profile: UserProfile) {
+  try {
+    await fetch("/api/user/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(profile),
+    });
+  } catch (err) {
+    console.warn("Server backend profile sync skipped:", err);
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -142,8 +155,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           localStorage.setItem("pact_auth_user", JSON.stringify(profile));
         }
 
-        // Fire-and-forget sync to Firestore
+        // Fire-and-forget sync to Firestore and server database
         safeFirestoreSync(firebaseUser.uid, profile);
+        syncProfileToBackend(profile);
       }
       setIsLoading(false);
     });
@@ -193,8 +207,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorage.setItem("pact_auth_user", JSON.stringify(profile));
       }
 
-      // 3. Background sync to Firestore without blocking navigation
+      // 3. Background sync to Firestore and server database without blocking navigation
       safeFirestoreSync(fbUser.uid, profile);
+      syncProfileToBackend(profile);
 
       // 4. Instantly navigate to dashboard
       router.push("/dashboard");
@@ -240,6 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       safeFirestoreSync(fbUser.uid, profile);
+      syncProfileToBackend(profile);
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Firebase Profile Setup error:", error);

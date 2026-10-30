@@ -58,6 +58,7 @@ export default function DashboardPage() {
   }, [mounted, isLoading, activeUser, router]);
 
   // Dynamic user data from Google Auth & onboarding profile
+  const displayId = activeUser?.id || "usr_adityananda_dev";
   const displayName = activeUser?.fullName || "Aditya Nanda";
   const displayEmail = activeUser?.email || "adityananda.dev@gmail.com";
   const displayAvatar = activeUser?.avatarUrl || "";
@@ -148,6 +149,10 @@ export default function DashboardPage() {
               <p className="text-sm font-medium text-[#747775] truncate mt-0.5">
                 {displayEmail}
               </p>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 mt-2 rounded-lg bg-[#f0f4f9] border border-[#e0e3e7] text-2xs font-mono text-[#444746]">
+                <span className="font-semibold text-[#747775]">UID:</span>
+                <span className="truncate max-w-[220px]">{displayId}</span>
+              </div>
             </div>
           </div>
 

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 import { createClient } from "@/lib/supabase-server";
 
 export async function GET() {
@@ -91,8 +93,30 @@ export async function GET() {
       (a) => a.alert_type === "scheduling_conflict"
     ).length;
 
+    // Read from persistent server data store if available
+    let storedUser = null;
+    try {
+      const usersPath = path.join(process.cwd(), ".data", "users.json");
+      if (fs.existsSync(usersPath)) {
+        const users = JSON.parse(fs.readFileSync(usersPath, "utf-8"));
+        const first = Object.values(users)[0] as any;
+        if (first) {
+          storedUser = {
+            id: first.id,
+            email: first.email,
+            full_name: first.fullName,
+            avatar_url: first.avatarUrl,
+            role: first.role,
+            age: first.age,
+            schedule_preference: first.schedulePreference,
+          };
+        }
+      }
+    } catch {}
+
     return NextResponse.json({
-      user: profile || {
+      user: profile || storedUser || {
+        id: "usr_adityananda_dev",
         email: user?.email || "adityananda.dev@gmail.com",
         full_name:
           user?.user_metadata?.full_name ||

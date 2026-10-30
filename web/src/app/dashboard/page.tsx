@@ -12,13 +12,11 @@ import {
   Sparkles,
   PhoneCall,
   Zap,
-  Sliders,
   Settings,
   Sun,
   Plus,
   Mic,
   Clock,
-  CheckCircle2,
   ExternalLink,
 } from "lucide-react";
 
@@ -130,36 +128,10 @@ export default function DashboardPage() {
     Array<{ sender: "user" | "ai"; text: string }>
   >([]);
 
-  // Modals for Preferences, Settings & Logout
-  const [isPrefModalOpen, setIsPrefModalOpen] = useState(false);
+  // Modals for Settings, Connect & Logout
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [editAge, setEditAge] = useState(String(displayAge));
-  const [editRole, setEditRole] = useState(displayRole);
-  const [editPref, setEditPref] = useState(displayPreference);
-
-  const handleUpdatePreferences = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const updated = {
-      ...activeUser,
-      age: parseInt(editAge, 10) || displayAge,
-      role: editRole || displayRole,
-      schedulePreference: editPref || displayPreference,
-    };
-    if (typeof window !== "undefined") {
-      localStorage.setItem("pact_auth_user", JSON.stringify(updated));
-      setLocalCache(updated);
-    }
-    try {
-      await fetch("/api/user/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updated),
-      });
-    } catch {}
-    setIsPrefModalOpen(false);
-  };
 
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
@@ -405,65 +377,71 @@ export default function DashboardPage() {
           {/* Right Executive Panel & Quick Actions (40% Width) */}
           <div className="w-full lg:w-[40%] flex flex-col justify-between gap-3 lg:gap-3.5 min-h-0">
             {/* User Profile Card + Dynamic Greeting + IST Timer */}
-            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4.5 shadow-xs">
-              <div className="flex items-center gap-4">
-                {/* Google Avatar Circle */}
+            <div className="border border-[#d3e3fd] rounded-2xl bg-gradient-to-br from-[#ffffff] via-[#f8fafd] to-[#eef4fc] p-4.5 lg:p-5 shadow-xs">
+              <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-5">
+                {/* 200px Google Avatar Circle */}
                 <div className="relative shrink-0">
                   {displayAvatar ? (
                     <img
                       src={displayAvatar}
                       alt={displayName}
                       referrerPolicy="no-referrer"
-                      className="w-16 h-16 rounded-full object-cover border-2 border-[#d3e3fd] shadow-2xs"
+                      className="w-36 h-36 sm:w-44 sm:h-44 lg:w-[200px] lg:h-[200px] rounded-full object-cover border-4 border-white shadow-md"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-full bg-[#0b57d0] text-white flex items-center justify-center text-lg font-bold border-2 border-[#d3e3fd] shadow-2xs">
+                    <div className="w-36 h-36 sm:w-44 sm:h-44 lg:w-[200px] lg:h-[200px] rounded-full bg-[#0b57d0] text-white flex items-center justify-center text-4xl font-extrabold border-4 border-white shadow-md">
                       {initials || "AN"}
                     </div>
                   )}
                   <div
-                    className="absolute bottom-0 right-0 w-4.5 h-4.5 rounded-full bg-[#34A853] border-2 border-white flex items-center justify-center text-white"
-                    title="Google Verified"
+                    className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-[#34A853] border-2 border-white flex items-center justify-center text-white shadow-xs"
+                    title="Google Verified Account"
                   >
-                    <ShieldCheck className="w-2.5 h-2.5" />
+                    <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
                 </div>
 
-                {/* User Name, Age, Role */}
-                <div className="min-w-0 flex-1">
-                  <div className="text-base font-bold text-[#1f1f1f] truncate leading-tight">
+                {/* User Info & Greetings */}
+                <div className="min-w-0 flex-1 flex flex-col justify-center text-center sm:text-left">
+                  {/* Big Dynamic Greeting */}
+                  <div className="text-lg lg:text-xl font-bold text-[#747775] leading-tight">
+                    {greeting},
+                  </div>
+
+                  {/* Big Name */}
+                  <div className="text-2xl lg:text-3xl font-black text-[#1f1f1f] tracking-tight leading-tight mt-0.5 truncate">
                     {displayName}
                   </div>
-                  <div className="text-xs font-semibold text-[#0b57d0] mt-0.5 truncate">
-                    {displayRole} • Age {displayAge}
+
+                  {/* Small Role & Age */}
+                  <div className="flex items-center justify-center sm:justify-start gap-2 mt-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#d3e3fd]/70 border border-[#d3e3fd] text-xs font-bold text-[#0b57d0]">
+                      {displayRole}
+                    </span>
+                    <span className="text-xs font-semibold text-[#444746]">
+                      Age {displayAge}
+                    </span>
                   </div>
-                  <div className="text-2xs text-[#747775] truncate mt-0.5">
+
+                  {/* Small Email */}
+                  <div className="text-xs text-[#747775] truncate mt-1">
                     {displayEmail}
                   </div>
-                </div>
-              </div>
 
-              {/* Dynamic Greeting & Live Timer in IST with Seconds */}
-              <div className="mt-3.5 pt-3 border-t border-[#e0e3e7]/80 flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-bold text-[#1f1f1f]">
-                    {greeting}, {displayName.split(" ")[0]}
+                  {/* Live IST Timer with Seconds */}
+                  <div className="mt-3 flex items-center justify-center sm:justify-start">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 border border-[#d3e3fd] font-mono text-xs font-bold text-[#1f1f1f] shadow-2xs">
+                      <Clock className="w-3.5 h-3.5 text-[#0b57d0]" />
+                      <span>{istTime || "Loading IST..."}</span>
+                    </div>
                   </div>
-                  <div className="text-2xs text-[#747775]">
-                    Schedule: {displayPreference}
-                  </div>
-                </div>
-
-                {/* IST Timer */}
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#f0f4f9] border border-[#e0e3e7] font-mono text-2xs font-semibold text-[#1f1f1f]">
-                  <Clock className="w-3 h-3 text-[#0b57d0]" />
-                  <span>{istTime || "Loading IST..."}</span>
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions AI Box with Bottom 1-Line Controls */}
+            {/* Quick Actions & AI Recommendations Card */}
             <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4.5 shadow-xs flex-1 flex flex-col justify-between">
+              {/* Top: AI Recommendation Header & Body */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f]">
@@ -480,52 +458,106 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Bottom 1-Line Controls (Mobile Notify + AI Mode) */}
-              <div className="mt-3 pt-2.5 border-t border-[#e0e3e7]/80 flex items-center gap-2">
-                <button
-                  onClick={() => setMobileNotify(!mobileNotify)}
-                  className={`flex-1 py-1.5 px-2 rounded-xl border text-2xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    mobileNotify
-                      ? "bg-[#e8f5e9] border-[#c8e6c9] text-[#2e7d32]"
-                      : "bg-[#f8fafd] border-[#e0e3e7] text-[#444746] hover:bg-[#f0f4f9]"
-                  }`}
-                  title="Toggle Call / Push Notifications over Mobile"
-                >
-                  <PhoneCall className="w-3 h-3" />
-                  <span>{mobileNotify ? "Notify: ON" : "Call on Mobile"}</span>
-                </button>
+              {/* Middle: Call on Mobile (Voice Escalation) Toggle with Upside Explanation */}
+              <div className="pt-3 border-t border-[#e0e3e7]/80">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f]">
+                      <PhoneCall className="w-3.5 h-3.5 text-[#0b57d0]" />
+                      <span>Call on Mobile (Voice Escalation)</span>
+                    </div>
+                    <p className="text-3xs text-[#747775] mt-1 leading-normal">
+                      When enabled, PACT initiates an urgent phone call to your mobile if high-priority scheduling conflicts require real-time clearance.
+                    </p>
+                  </div>
 
-                <button
-                  onClick={() =>
-                    setAiMode(aiMode === "safe" ? "turbo" : "safe")
-                  }
-                  className={`flex-1 py-1.5 px-2 rounded-xl border text-2xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    aiMode === "turbo"
-                      ? "bg-[#fff3e0] border-[#ffe0b2] text-[#e65100]"
-                      : "bg-[#e8f0fe] border-[#d3e3fd] text-[#0b57d0]"
-                  }`}
-                  title="Toggle AI Autonomy Mode"
-                >
-                  <Zap className="w-3 h-3" />
-                  <span>{aiMode === "safe" ? "Mode: Safe Read" : "Mode: Turbo"}</span>
-                </button>
+                  {/* Interactive Toggle Switch */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={mobileNotify}
+                    onClick={() => setMobileNotify(!mobileNotify)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      mobileNotify ? "bg-[#1e8e3e]" : "bg-[#c4c7c5]"
+                    }`}
+                    title="Toggle Call on Mobile"
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                        mobileNotify ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+                <div className="mt-1 text-3xs font-semibold">
+                  {mobileNotify ? (
+                    <span className="text-[#1e8e3e]">Active • Calls enabled for urgent conflicts</span>
+                  ) : (
+                    <span className="text-[#747775]">Disabled • In-app notifications only</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom: Execution Autonomy Mode with Upside Explanations */}
+              <div className="pt-3 border-t border-[#e0e3e7]/80">
+                <div className="mb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f]">
+                    <Zap className="w-3.5 h-3.5 text-[#0b57d0]" />
+                    <span>Execution Autonomy Mode</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-1.5">
+                    <div className="text-3xs text-[#747775] leading-snug bg-[#f8fafd] p-2 rounded-lg border border-[#e0e3e7]/60">
+                      <span className="font-bold text-[#1f1f1f] block">Safe Mode</span>
+                      Requires explicit human clearance before executing emails, calendar events, or tasks.
+                    </div>
+                    <div className="text-3xs text-[#747775] leading-snug bg-[#f8fafd] p-2 rounded-lg border border-[#e0e3e7]/60">
+                      <span className="font-bold text-[#1f1f1f] block">Turbo Mode</span>
+                      Autonomously executes high-confidence routine actions with full access and writes audit logs.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setAiMode("safe")}
+                    className={`py-2 px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      aiMode === "safe"
+                        ? "bg-[#e8f0fe] border-[#0b57d0] text-[#0b57d0] shadow-2xs"
+                        : "bg-white border-[#e0e3e7] text-[#444746] hover:bg-[#f8fafd]"
+                    }`}
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Safe (Clearance)</span>
+                  </button>
+
+                  <button
+                    onClick={() => setAiMode("turbo")}
+                    className={`py-2 px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      aiMode === "turbo"
+                        ? "bg-[#fff3e0] border-[#e65100] text-[#e65100] shadow-2xs"
+                        : "bg-white border-[#e0e3e7] text-[#444746] hover:bg-[#f8fafd]"
+                    }`}
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Turbo (Full Access)</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 3. Bottom Row (3 Columns as per Wireframe) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-3.5 shrink-0">
-          {/* Bottom Left (3 cols): Connected Apps with Icons & Plus Button */}
-          <div className="lg:col-span-3 border border-[#e0e3e7] bg-white rounded-2xl p-3 lg:p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="text-2xs font-bold text-[#747775] uppercase tracking-wider mb-2">
-              Connected Workspace Apps
-            </div>
-
-            <div className="flex items-center gap-3">
+        {/* 3. Bottom Row */}
+        <div className="flex flex-col lg:flex-row items-center gap-3 lg:gap-4 shrink-0">
+          {/* Bottom Left: Connected Workspace Apps (No card box, clean transparent display) */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <span className="text-2xs font-bold text-[#747775] uppercase tracking-wider hidden sm:inline">
+              Apps
+            </span>
+            <div className="flex items-center gap-2">
               {/* Gmail Icon */}
-              <div className="relative group" title="Gmail: Connected & Synchronized">
-                <div className="w-8.5 h-8.5 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+              <div className="relative group cursor-pointer" title="Gmail: Connected & Synchronized">
+                <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] bg-white flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
                   <img
                     src="/icons/gmail.png"
                     alt="Gmail"
@@ -536,8 +568,8 @@ export default function DashboardPage() {
               </div>
 
               {/* Calendar Icon */}
-              <div className="relative group" title="Google Calendar: Connected & Synchronized">
-                <div className="w-8.5 h-8.5 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+              <div className="relative group cursor-pointer" title="Google Calendar: Connected & Synchronized">
+                <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] bg-white flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
                   <img
                     src="/icons/calendar.png"
                     alt="Calendar"
@@ -548,8 +580,8 @@ export default function DashboardPage() {
               </div>
 
               {/* Tasks Icon */}
-              <div className="relative group" title="Google Tasks: Connected & Synchronized">
-                <div className="w-8.5 h-8.5 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+              <div className="relative group cursor-pointer" title="Google Tasks: Connected & Synchronized">
+                <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] bg-white flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
                   <img
                     src="/icons/tasks.svg"
                     alt="Tasks"
@@ -562,7 +594,7 @@ export default function DashboardPage() {
               {/* Plus Button to Connect More Apps */}
               <button
                 onClick={() => setIsConnectModalOpen(true)}
-                className="w-8.5 h-8.5 rounded-xl border border-dashed border-[#747775]/50 hover:border-[#0b57d0] hover:bg-[#d3e3fd]/20 text-[#747775] hover:text-[#0b57d0] flex items-center justify-center transition-all cursor-pointer"
+                className="w-9 h-9 rounded-xl border border-dashed border-[#747775]/50 hover:border-[#0b57d0] hover:bg-[#d3e3fd]/20 text-[#747775] hover:text-[#0b57d0] flex items-center justify-center transition-all cursor-pointer"
                 title="Connect More Applications"
               >
                 <Plus className="w-4 h-4" />
@@ -570,8 +602,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Bottom Middle (6 cols): Chat Input for the AI */}
-          <div className="lg:col-span-6 border border-[#e0e3e7] bg-white rounded-2xl p-2.5 lg:p-3 shadow-xs flex flex-col justify-between">
+          {/* Bottom Middle: Chat Input for the AI (Spacious central bar) */}
+          <div className="w-full flex-1 min-w-0 border border-[#e0e3e7] bg-white rounded-2xl p-2.5 lg:p-3 shadow-xs flex flex-col justify-between">
             <form onSubmit={handleSendChat} className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-[#d3e3fd] text-[#0b57d0] flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4" />
@@ -635,114 +667,31 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Bottom Right (3 cols): Usable Buttons (Preferences, Settings, Theme) */}
-          <div className="lg:col-span-3 border border-[#e0e3e7] bg-white rounded-2xl p-3 lg:p-3.5 shadow-xs flex items-center justify-between gap-2">
-            {/* Update Preference Button */}
-            <button
-              onClick={() => {
-                setEditAge(String(displayAge));
-                setEditRole(displayRole);
-                setEditPref(displayPreference);
-                setIsPrefModalOpen(true);
-              }}
-              className="flex-1 py-2 px-2 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-2xs font-semibold text-[#1f1f1f] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
-              title="Update Working Preferences & Role"
-            >
-              <Sliders className="w-3.5 h-3.5 text-[#0b57d0]" />
-              <span className="truncate">Preferences</span>
-            </button>
-
+          {/* Bottom Right: Usable Buttons (No card box, Settings and Theme only) */}
+          <div className="flex items-center gap-2 shrink-0">
             {/* Settings Button */}
             <button
               onClick={() => setIsSettingsModalOpen(true)}
-              className="flex-1 py-2 px-2 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-2xs font-semibold text-[#1f1f1f] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
+              className="py-2.5 px-3 rounded-xl border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-xs font-semibold text-[#1f1f1f] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
               title="System & Security Settings"
             >
-              <Settings className="w-3.5 h-3.5 text-[#444746]" />
-              <span className="truncate">Settings</span>
+              <Settings className="w-4 h-4 text-[#444746]" />
+              <span>Settings</span>
             </button>
 
             {/* Theme Button */}
             <button
-              className="flex-1 py-2 px-2 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-2xs font-semibold text-[#1f1f1f] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
+              className="py-2.5 px-3 rounded-xl border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-xs font-semibold text-[#1f1f1f] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
               title="Theme Toggle"
             >
-              <Sun className="w-3.5 h-3.5 text-[#f9ab00]" />
-              <span className="truncate">Theme</span>
+              <Sun className="w-4 h-4 text-[#f9ab00]" />
+              <span>Theme</span>
             </button>
           </div>
         </div>
       </main>
 
-      {/* Modal: Update Preferences */}
-      <Modal
-        isOpen={isPrefModalOpen}
-        onClose={() => setIsPrefModalOpen(false)}
-        title="Update Executive Profile Preferences"
-      >
-        <form onSubmit={handleUpdatePreferences} className="space-y-4 text-left">
-          <div>
-            <label className="block text-xs font-semibold text-[#444746] uppercase tracking-wider mb-1">
-              Role / Title
-            </label>
-            <input
-              type="text"
-              value={editRole}
-              onChange={(e) => setEditRole(e.target.value)}
-              className="w-full rounded-xl border border-[#e0e3e7] bg-[#f8fafd] px-3.5 py-2 text-sm text-[#1f1f1f] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] focus:bg-white"
-            />
-          </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#444746] uppercase tracking-wider mb-1">
-              Age
-            </label>
-            <input
-              type="number"
-              value={editAge}
-              onChange={(e) => setEditAge(e.target.value)}
-              className="w-full rounded-xl border border-[#e0e3e7] bg-[#f8fafd] px-3.5 py-2 text-sm text-[#1f1f1f] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] focus:bg-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[#444746] uppercase tracking-wider mb-1">
-              Schedule Preference Rule
-            </label>
-            <select
-              value={editPref}
-              onChange={(e) => setEditPref(e.target.value)}
-              className="w-full rounded-xl border border-[#e0e3e7] bg-[#f8fafd] px-3.5 py-2 text-sm text-[#1f1f1f] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] focus:bg-white cursor-pointer"
-            >
-              <option value="Avoid meetings before 10:00 AM">
-                Avoid meetings before 10:00 AM (Recommended)
-              </option>
-              <option value="Standard Business Hours (9:00 AM – 6:00 PM)">
-                Standard Business Hours (9:00 AM – 6:00 PM)
-              </option>
-              <option value="Late Focus Schedule (11:00 AM – 8:00 PM)">
-                Late Focus Schedule (11:00 AM – 8:00 PM)
-              </option>
-            </select>
-          </div>
-
-          <div className="pt-3 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setIsPrefModalOpen(false)}
-              className="px-4 py-2 rounded-full border border-[#e0e3e7] text-xs font-medium text-[#444746] hover:bg-[#f0f4f9] cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-full bg-[#0b57d0] text-xs font-medium text-white hover:bg-[#0842a0] transition-colors cursor-pointer shadow-xs"
-            >
-              Save Changes
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       {/* Modal: Connect More Apps */}
       <Modal

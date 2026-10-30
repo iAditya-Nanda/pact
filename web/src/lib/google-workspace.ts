@@ -226,15 +226,31 @@ export async function fetchLiveGmail(accessToken: string): Promise<{ data: LiveG
     importantCount = importantData.resultSizeEstimate ?? (importantData.messages?.length || 0);
   }
 
-  let targetMessages = unreadMessages;
-  if (targetMessages.length === 0) {
-    const recentRes = await fetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5",
-      { headers }
-    );
-    if (recentRes.ok) {
-      const recentData = await recentRes.json();
-      targetMessages = recentData.messages || [];
+  // Fetch up to 25 recent messages from the inbox so all emails of this month appear in the UI
+  const recentRes = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=25",
+    { headers }
+  );
+
+  const seenIds = new Set<string>();
+  const allMessageIds: string[] = [];
+
+  // Put unread messages first so they appear at the top of the inbox
+  for (const m of unreadMessages) {
+    if (m?.id && !seenIds.has(m.id)) {
+      seenIds.add(m.id);
+      allMessageIds.push(m.id);
+    }
+  }
+
+  // Then add all recent messages from the inbox for this month
+  if (recentRes.ok) {
+    const recentData = await recentRes.json();
+    for (const m of (recentData.messages || [])) {
+      if (m?.id && !seenIds.has(m.id)) {
+        seenIds.add(m.id);
+        allMessageIds.push(m.id);
+      }
     }
   }
 
@@ -249,11 +265,12 @@ export async function fetchLiveGmail(accessToken: string): Promise<{ data: LiveG
 
   const emailsList: WorkspaceEmail[] = [];
 
-  if (targetMessages.length > 0) {
-    const msgFetches = targetMessages.slice(0, 5).map(async (msg) => {
+  if (allMessageIds.length > 0) {
+    // Fetch details for up to 25 emails concurrently in parallel
+    const msgFetches = allMessageIds.slice(0, 25).map(async (msgId) => {
       try {
         const detailRes = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msgId}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
           { headers }
         );
         if (detailRes.ok) {
@@ -269,15 +286,18 @@ export async function fetchLiveGmail(accessToken: string): Promise<{ data: LiveG
           const cleanSender = cleanSenderString(fromHeader);
           const senderEmail = extractSenderEmail(fromHeader);
 
+          const isUnread = detail.labelIds?.includes("UNREAD") ?? false;
+          const isImportant = detail.labelIds?.includes("IMPORTANT") ?? false;
+
           const emailObj: WorkspaceEmail = {
-            id: msg.id,
+            id: msgId,
             sender: cleanSender,
             senderEmail,
             subject: subjectHeader,
             snippet: detail.snippet || "",
             receivedAt: formatEmailTime(dateHeader),
-            priority: unreadCount > 0 ? "high" : "normal",
-            status: "unread",
+            priority: isImportant ? "urgent" : isUnread ? "high" : "normal",
+            status: isUnread ? "unread" : "read",
             thisMonth: true,
           };
 

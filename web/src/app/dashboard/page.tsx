@@ -180,43 +180,27 @@ export default function DashboardPage() {
 
   return (
     <div className="h-screen max-h-screen flex flex-col justify-between overflow-hidden bg-[#f8fafd] select-none text-[#1f1f1f]">
-      {/* 1. Header (Top Flush App Bar - Previous Design as Requested) */}
-      <header className="h-16 border-b border-[#e0e3e7] bg-white px-6 lg:px-10 flex items-center justify-between shrink-0 shadow-2xs">
+      {/* 1. Header (Clean & Minimal with P.A.C.T. and Big Sign Out Icon) */}
+      <header className="h-16 border-b border-[#e0e3e7] bg-white px-6 lg:px-10 flex items-center justify-between shrink-0">
         {/* Left Branding */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs">
             P
           </div>
           <span className="text-xl font-bold tracking-tight text-[#1f1f1f]">
-            PACT
-          </span>
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#d3e3fd] text-[#041e49] font-medium hidden sm:inline-block">
-            Console
+            P.A.C.T.
           </span>
         </div>
 
-        {/* Center Engine Indicator */}
-        <div className="hidden md:flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#f0f4f9] text-xs font-medium text-[#444746]">
-          <span className="w-2 h-2 rounded-full bg-[#34A853] animate-pulse" />
-          <span>Local Engine Standby • Guarded Autonomy</span>
-        </div>
-
-        {/* Right Controls */}
-        <div className="flex items-center gap-3.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] border border-[#c8e6c9] text-xs font-semibold text-[#2e7d32]">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#2e7d32]" />
-            <span className="hidden sm:inline">Active Session Persisted</span>
-          </div>
-
-          <button
-            onClick={logout}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-xs font-semibold text-[#ba1a1a] transition-all cursor-pointer shadow-2xs"
-            title="Sign Out"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
-          </button>
-        </div>
+        {/* Right End: Non-chip like, clean prominent icon */}
+        <button
+          onClick={logout}
+          className="p-2 rounded-xl text-[#444746] hover:text-[#ba1a1a] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] transition-all cursor-pointer"
+          title="Sign Out"
+          aria-label="Sign Out"
+        >
+          <LogOut className="w-5 h-5" />
+        </button>
       </header>
 
       {/* 2. Main Content Canvas */}
@@ -232,9 +216,10 @@ export default function DashboardPage() {
                   <span className="text-xs font-bold text-[#1f1f1f] tracking-tight truncate">
                     Gmail Insights &amp; Info
                   </span>
-                  <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-[#fce8e6] text-[#c5221f] shrink-0">
-                    Live Inbox
-                  </span>
+                  <div className="flex items-center gap-1.5 text-2xs font-medium text-[#747775] shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#EA4335]" />
+                    <span>Inbox</span>
+                  </div>
                 </div>
 
                 <div className="mt-3.5 space-y-3">
@@ -293,9 +278,10 @@ export default function DashboardPage() {
                   <span className="text-xs font-bold text-[#1f1f1f] tracking-tight truncate">
                     Calendar Insights &amp; Info
                   </span>
-                  <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-[#e8f0fe] text-[#1a73e8] shrink-0">
-                    Schedule
-                  </span>
+                  <div className="flex items-center gap-1.5 text-2xs font-medium text-[#747775] shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#4285F4]" />
+                    <span>Schedule</span>
+                  </div>
                 </div>
 
                 <div className="mt-3.5 space-y-3">
@@ -314,7 +300,7 @@ export default function DashboardPage() {
                       <div className="text-3xs text-[#747775]">This week</div>
                     </div>
                     <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
-                      <div className="text-xs font-bold text-[#146c2e]">0 Conflicts</div>
+                      <div className="text-xs font-bold text-[#1f1f1f]">0 Conflicts</div>
                       <div className="text-3xs text-[#747775]">Protected</div>
                     </div>
                   </div>
@@ -354,9 +340,10 @@ export default function DashboardPage() {
                   <span className="text-xs font-bold text-[#1f1f1f] tracking-tight truncate">
                     Tasks Insights &amp; Info
                   </span>
-                  <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-[#e6f4ea] text-[#137333] shrink-0">
-                    Priority Queue
-                  </span>
+                  <div className="flex items-center gap-1.5 text-2xs font-medium text-[#747775] shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#34A853]" />
+                    <span>Tasks</span>
+                  </div>
                 </div>
 
                 <div className="mt-3.5 space-y-3">
@@ -375,7 +362,7 @@ export default function DashboardPage() {
                       <div className="text-3xs text-[#747775]">Urgent</div>
                     </div>
                     <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
-                      <div className="text-xs font-bold text-[#146c2e]">0 Overdue</div>
+                      <div className="text-xs font-bold text-[#1f1f1f]">0 Overdue</div>
                       <div className="text-3xs text-[#747775]">On track</div>
                     </div>
                   </div>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Modal } from "@/components/ui/Modal";
 import { WorkspaceWindow, WorkspaceChatPanel } from "@/components/workspace-window";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { WorkspaceData } from "@/lib/workspace-service";
 import {
   LogOut,
@@ -189,9 +190,11 @@ export default function DashboardPage() {
   const [isApproving, setIsApproving] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+  const [isCheckingWorkspace, setIsCheckingWorkspace] = useState(true);
 
   // Fetch full workspace state from backend API (with live Google token)
   const refreshWorkspace = async () => {
+    setIsCheckingWorkspace(true);
     try {
       const token =
         typeof window !== "undefined"
@@ -216,6 +219,8 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.warn("Failed to fetch workspace overview from API:", err);
+    } finally {
+      setIsCheckingWorkspace(false);
     }
   };
 
@@ -529,6 +534,10 @@ export default function DashboardPage() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  if (!mounted || isLoading || (isCheckingWorkspace && !workspace)) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div

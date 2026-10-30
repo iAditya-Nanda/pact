@@ -19,12 +19,11 @@ import {
   Mic,
   Clock,
   CheckCircle2,
-  AlertCircle,
   ExternalLink,
 } from "lucide-react";
 
 export default function DashboardPage() {
-  const { user, isLoading, logout, saveOnboardingProfile } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
@@ -180,9 +179,9 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen lg:h-screen lg:max-h-screen flex flex-col justify-between bg-[#f8fafd] select-none text-[#1f1f1f] p-4 lg:p-6 gap-3 lg:gap-4 overflow-y-auto lg:overflow-hidden">
-      {/* 1. Header (Top Full-Width Box as per Wireframe) */}
-      <header className="h-14 lg:h-16 border border-[#e0e3e7] bg-white rounded-2xl px-5 lg:px-7 flex items-center justify-between shrink-0 shadow-2xs">
+    <div className="h-screen max-h-screen flex flex-col justify-between overflow-hidden bg-[#f8fafd] select-none text-[#1f1f1f]">
+      {/* 1. Header (Top Flush App Bar - Previous Design as Requested) */}
+      <header className="h-16 border-b border-[#e0e3e7] bg-white px-6 lg:px-10 flex items-center justify-between shrink-0 shadow-2xs">
         {/* Left Branding */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs">
@@ -197,16 +196,16 @@ export default function DashboardPage() {
         </div>
 
         {/* Center Engine Indicator */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-[#f0f4f9] text-xs font-medium text-[#444746]">
+        <div className="hidden md:flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#f0f4f9] text-xs font-medium text-[#444746]">
           <span className="w-2 h-2 rounded-full bg-[#34A853] animate-pulse" />
           <span>Local Engine Standby • Guarded Autonomy</span>
         </div>
 
         {/* Right Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3.5">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f5e9] border border-[#c8e6c9] text-xs font-semibold text-[#2e7d32]">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#2e7d32]" />
-            <span className="hidden sm:inline">Session Persisted</span>
+            <span className="hidden sm:inline">Active Session Persisted</span>
           </div>
 
           <button
@@ -220,461 +219,467 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* 2. Upper Main Row (4 Columns Grid as per Wireframe) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 flex-1 min-h-0">
-        {/* Column 1: Gmail Insights & Info */}
-        <div className="border border-[#e0e3e7] rounded-2xl bg-white p-5 flex flex-col justify-between shadow-xs hover:border-[#0b57d0]/40 transition-all">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-[#e0e3e7]/80">
-              <span className="text-sm font-bold text-[#1f1f1f] tracking-tight">
-                Gmail Insights &amp; Info
-              </span>
-              <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-[#fce8e6] text-[#c5221f]">
-                Live Inbox
-              </span>
-            </div>
-
-            <div className="mt-4 space-y-3.5">
+      {/* 2. Main Content Canvas */}
+      <main className="flex-1 flex flex-col justify-between px-6 lg:px-10 py-4 lg:py-5 gap-3.5 lg:gap-4 overflow-y-auto lg:overflow-hidden">
+        {/* Upper Main Row: 60% Width for 3 Cards + 40% Width for Executive Panel */}
+        <div className="flex flex-col lg:flex-row gap-3.5 lg:gap-4 items-stretch flex-1 min-h-0">
+          {/* 3 Cards Container (Constrained to 60% Width as Requested) */}
+          <div className="w-full lg:w-[60%] grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-3.5 min-h-0">
+            {/* Column 1: Gmail Insights & Info */}
+            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4.5 flex flex-col justify-between shadow-xs hover:border-[#0b57d0]/40 transition-all">
               <div>
-                <div className="text-3xl font-extrabold text-[#1f1f1f] tracking-tight">
-                  14
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#e0e3e7]/80">
+                  <span className="text-xs font-bold text-[#1f1f1f] tracking-tight truncate">
+                    Gmail Insights &amp; Info
+                  </span>
+                  <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-[#fce8e6] text-[#c5221f] shrink-0">
+                    Live Inbox
+                  </span>
                 </div>
-                <div className="text-xs font-medium text-[#747775]">
-                  Unread priority emails
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e0e3e7]/60">
-                <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
-                  <div className="text-xs font-bold text-[#1f1f1f]">342</div>
-                  <div className="text-2xs text-[#747775]">This month</div>
-                </div>
-                <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
-                  <div className="text-xs font-bold text-[#1f1f1f]">4</div>
-                  <div className="text-2xs text-[#747775]">Important</div>
-                </div>
-              </div>
-
-              <div className="bg-[#f8fafd] p-2.5 rounded-xl border border-[#e0e3e7]/60">
-                <div className="text-2xs font-semibold text-[#444746] truncate">
-                  Latest: Sarah Lin (VP Eng)
-                </div>
-                <div className="text-2xs text-[#747775] truncate mt-0.5">
-                  Q4 Architecture Review Agenda &amp; Pre-reads
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Button with Real Gmail Logo */}
-          <a
-            href="https://mail.google.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full mt-4 rounded-xl border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] py-2.5 px-4 font-semibold text-xs text-[#1f1f1f] flex items-center justify-center gap-2.5 shadow-2xs transition-all cursor-pointer group"
-          >
-            <img
-              src="/icons/gmail.png"
-              alt="Gmail"
-              className="w-4.5 h-4.5 object-contain group-hover:scale-110 transition-transform"
-            />
-            <span>Open Gmail</span>
-            <ExternalLink className="w-3 h-3 text-[#747775] ml-auto" />
-          </a>
-        </div>
-
-        {/* Column 2: Calendar Insights & Info */}
-        <div className="border border-[#e0e3e7] rounded-2xl bg-white p-5 flex flex-col justify-between shadow-xs hover:border-[#0b57d0]/40 transition-all">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-[#e0e3e7]/80">
-              <span className="text-sm font-bold text-[#1f1f1f] tracking-tight">
-                Calendar Insights &amp; Info
-              </span>
-              <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-[#e8f0fe] text-[#1a73e8]">
-                Schedule
-              </span>
-            </div>
-
-            <div className="mt-4 space-y-3.5">
-              <div>
-                <div className="text-3xl font-extrabold text-[#1f1f1f] tracking-tight">
-                  3
-                </div>
-                <div className="text-xs font-medium text-[#747775]">
-                  Meetings scheduled today
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e0e3e7]/60">
-                <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
-                  <div className="text-xs font-bold text-[#1f1f1f]">18.5 hrs</div>
-                  <div className="text-2xs text-[#747775]">This week</div>
-                </div>
-                <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
-                  <div className="text-xs font-bold text-[#146c2e]">0 Conflicts</div>
-                  <div className="text-2xs text-[#747775]">Protected</div>
-                </div>
-              </div>
-
-              <div className="bg-[#f8fafd] p-2.5 rounded-xl border border-[#e0e3e7]/60">
-                <div className="text-2xs font-semibold text-[#444746] truncate">
-                  Next: Executive Sync
-                </div>
-                <div className="text-2xs text-[#747775] truncate mt-0.5">
-                  11:30 AM – 12:15 PM • Google Meet
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Button with Real Google Calendar Logo */}
-          <a
-            href="https://calendar.google.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full mt-4 rounded-xl border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] py-2.5 px-4 font-semibold text-xs text-[#1f1f1f] flex items-center justify-center gap-2.5 shadow-2xs transition-all cursor-pointer group"
-          >
-            <img
-              src="/icons/calendar.png"
-              alt="Calendar"
-              className="w-4.5 h-4.5 object-contain group-hover:scale-110 transition-transform"
-            />
-            <span>Open Calendar</span>
-            <ExternalLink className="w-3 h-3 text-[#747775] ml-auto" />
-          </a>
-        </div>
-
-        {/* Column 3: Tasks Insights & Info */}
-        <div className="border border-[#e0e3e7] rounded-2xl bg-white p-5 flex flex-col justify-between shadow-xs hover:border-[#0b57d0]/40 transition-all">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-[#e0e3e7]/80">
-              <span className="text-sm font-bold text-[#1f1f1f] tracking-tight">
-                Tasks Insights &amp; Info
-              </span>
-              <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-[#e6f4ea] text-[#137333]">
-                Priority Queue
-              </span>
-            </div>
-
-            <div className="mt-4 space-y-3.5">
-              <div>
-                <div className="text-3xl font-extrabold text-[#1f1f1f] tracking-tight">
-                  8
-                </div>
-                <div className="text-xs font-medium text-[#747775]">
-                  Active tasks pending
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e0e3e7]/60">
-                <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
-                  <div className="text-xs font-bold text-[#1f1f1f]">2 Due today</div>
-                  <div className="text-2xs text-[#747775]">Urgent</div>
-                </div>
-                <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
-                  <div className="text-xs font-bold text-[#146c2e]">0 Overdue</div>
-                  <div className="text-2xs text-[#747775]">On track</div>
-                </div>
-              </div>
-
-              <div className="bg-[#f8fafd] p-2.5 rounded-xl border border-[#e0e3e7]/60">
-                <div className="text-2xs font-semibold text-[#444746] truncate">
-                  Top Priority Action
-                </div>
-                <div className="text-2xs text-[#747775] truncate mt-0.5">
-                  Sign off on Q4 security token rotation protocol
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Button with Real Google Tasks Logo */}
-          <a
-            href="https://tasks.google.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full mt-4 rounded-xl border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] py-2.5 px-4 font-semibold text-xs text-[#1f1f1f] flex items-center justify-center gap-2.5 shadow-2xs transition-all cursor-pointer group"
-          >
-            <img
-              src="/icons/tasks.svg"
-              alt="Tasks"
-              className="w-4.5 h-4.5 object-contain group-hover:scale-110 transition-transform"
-            />
-            <span>Open Tasks</span>
-            <ExternalLink className="w-3 h-3 text-[#747775] ml-auto" />
-          </a>
-        </div>
-
-        {/* Column 4: Executive Identity & Quick Actions AI */}
-        <div className="flex flex-col justify-between gap-3 min-h-0">
-          {/* User Profile Info Card */}
-          <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4.5 shadow-xs">
-            <div className="flex items-center gap-4">
-              {/* Google Avatar Circle */}
-              <div className="relative shrink-0">
-                {displayAvatar ? (
-                  <img
-                    src={displayAvatar}
-                    alt={displayName}
-                    referrerPolicy="no-referrer"
-                    className="w-16 h-16 rounded-full object-cover border-2 border-[#d3e3fd] shadow-2xs"
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-full bg-[#0b57d0] text-white flex items-center justify-center text-lg font-bold border-2 border-[#d3e3fd] shadow-2xs">
-                    {initials || "AN"}
+                <div className="mt-3.5 space-y-3">
+                  <div>
+                    <div className="text-2xl font-extrabold text-[#1f1f1f] tracking-tight">
+                      14
+                    </div>
+                    <div className="text-2xs font-medium text-[#747775]">
+                      Unread priority emails
+                    </div>
                   </div>
-                )}
-                <div
-                  className="absolute bottom-0 right-0 w-4.5 h-4.5 rounded-full bg-[#34A853] border-2 border-white flex items-center justify-center text-white"
-                  title="Google Verified"
-                >
-                  <ShieldCheck className="w-2.5 h-2.5" />
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e0e3e7]/60">
+                    <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
+                      <div className="text-xs font-bold text-[#1f1f1f]">342</div>
+                      <div className="text-3xs text-[#747775]">This month</div>
+                    </div>
+                    <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
+                      <div className="text-xs font-bold text-[#1f1f1f]">4</div>
+                      <div className="text-3xs text-[#747775]">Important</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#f8fafd] p-2.5 rounded-xl border border-[#e0e3e7]/60">
+                    <div className="text-3xs font-semibold text-[#444746] truncate">
+                      Latest: Sarah Lin (VP Eng)
+                    </div>
+                    <div className="text-3xs text-[#747775] truncate mt-0.5">
+                      Q4 Architecture Review Agenda
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* User Name, Age, Role */}
-              <div className="min-w-0 flex-1">
-                <div className="text-base font-bold text-[#1f1f1f] truncate leading-tight">
-                  {displayName}
-                </div>
-                <div className="text-xs font-semibold text-[#0b57d0] mt-0.5 truncate">
-                  {displayRole} • Age {displayAge}
-                </div>
-                <div className="text-2xs text-[#747775] truncate mt-0.5">
-                  {displayEmail}
-                </div>
-              </div>
-            </div>
-
-            {/* Dynamic Greeting & Live Timer in IST with Seconds */}
-            <div className="mt-3.5 pt-3 border-t border-[#e0e3e7]/80 flex items-center justify-between">
-              <div>
-                <div className="text-xs font-bold text-[#1f1f1f]">
-                  {greeting}, {displayName.split(" ")[0]}
-                </div>
-                <div className="text-2xs text-[#747775]">
-                  Schedule: {displayPreference}
-                </div>
-              </div>
-
-              {/* IST Timer */}
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#f0f4f9] border border-[#e0e3e7] font-mono text-2xs font-semibold text-[#1f1f1f]">
-                <Clock className="w-3 h-3 text-[#0b57d0]" />
-                <span>{istTime || "Loading IST..."}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions AI Box with Bottom 1-Line Controls */}
-          <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4.5 shadow-xs flex-1 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f]">
-                  <Sparkles className="w-3.5 h-3.5 text-[#0b57d0]" />
-                  <span>AI Recommended Action</span>
-                </div>
-                <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-[#e8f0fe] text-[#0b57d0]">
-                  Ready
-                </span>
-              </div>
-
-              <div className="text-xs text-[#444746] leading-relaxed bg-[#f8fafd] p-2.5 rounded-xl border border-[#e0e3e7]/80">
-                Reschedule Client Debrief to 3:30 PM to honor your protected focus block rule.
-              </div>
-            </div>
-
-            {/* Bottom 1-Line Controls (Mobile Notify + AI Mode) */}
-            <div className="mt-3 pt-2.5 border-t border-[#e0e3e7]/80 flex items-center gap-2">
-              <button
-                onClick={() => setMobileNotify(!mobileNotify)}
-                className={`flex-1 py-1.5 px-2 rounded-xl border text-2xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  mobileNotify
-                    ? "bg-[#e8f5e9] border-[#c8e6c9] text-[#2e7d32]"
-                    : "bg-[#f8fafd] border-[#e0e3e7] text-[#444746] hover:bg-[#f0f4f9]"
-                }`}
-                title="Toggle Call / Push Notifications over Mobile"
+              {/* Bottom Button with Real Gmail Logo */}
+              <a
+                href="https://mail.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mt-3 rounded-xl border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] py-2 px-3 font-semibold text-xs text-[#1f1f1f] flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer group"
               >
-                <PhoneCall className="w-3 h-3" />
-                <span>{mobileNotify ? "Notify: ON" : "Call on Mobile"}</span>
-              </button>
-
-              <button
-                onClick={() =>
-                  setAiMode(aiMode === "safe" ? "turbo" : "safe")
-                }
-                className={`flex-1 py-1.5 px-2 rounded-xl border text-2xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  aiMode === "turbo"
-                    ? "bg-[#fff3e0] border-[#ffe0b2] text-[#e65100]"
-                    : "bg-[#e8f0fe] border-[#d3e3fd] text-[#0b57d0]"
-                }`}
-                title="Toggle AI Autonomy Mode"
-              >
-                <Zap className="w-3 h-3" />
-                <span>{aiMode === "safe" ? "Mode: Safe Read" : "Mode: Turbo"}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Bottom Row (3 Columns as per Wireframe) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 shrink-0">
-        {/* Bottom Left (3 cols): Connected Apps with Icons & Plus Button */}
-        <div className="lg:col-span-3 border border-[#e0e3e7] bg-white rounded-2xl p-3.5 lg:p-4 shadow-xs flex flex-col justify-between">
-          <div className="text-2xs font-bold text-[#747775] uppercase tracking-wider mb-2">
-            Connected Workspace Apps
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Gmail Icon */}
-            <div className="relative group" title="Gmail: Connected & Synchronized">
-              <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
                 <img
                   src="/icons/gmail.png"
                   alt="Gmail"
-                  className="w-full h-full object-contain"
+                  className="w-4 h-4 object-contain group-hover:scale-110 transition-transform"
                 />
-              </div>
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#34A853] border-2 border-white" />
+                <span>Open Gmail</span>
+                <ExternalLink className="w-3 h-3 text-[#747775] ml-auto" />
+              </a>
             </div>
 
-            {/* Calendar Icon */}
-            <div className="relative group" title="Google Calendar: Connected & Synchronized">
-              <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+            {/* Column 2: Calendar Insights & Info */}
+            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4.5 flex flex-col justify-between shadow-xs hover:border-[#0b57d0]/40 transition-all">
+              <div>
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#e0e3e7]/80">
+                  <span className="text-xs font-bold text-[#1f1f1f] tracking-tight truncate">
+                    Calendar Insights &amp; Info
+                  </span>
+                  <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-[#e8f0fe] text-[#1a73e8] shrink-0">
+                    Schedule
+                  </span>
+                </div>
+
+                <div className="mt-3.5 space-y-3">
+                  <div>
+                    <div className="text-2xl font-extrabold text-[#1f1f1f] tracking-tight">
+                      3
+                    </div>
+                    <div className="text-2xs font-medium text-[#747775]">
+                      Meetings scheduled today
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e0e3e7]/60">
+                    <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
+                      <div className="text-xs font-bold text-[#1f1f1f]">18.5 hrs</div>
+                      <div className="text-3xs text-[#747775]">This week</div>
+                    </div>
+                    <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
+                      <div className="text-xs font-bold text-[#146c2e]">0 Conflicts</div>
+                      <div className="text-3xs text-[#747775]">Protected</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#f8fafd] p-2.5 rounded-xl border border-[#e0e3e7]/60">
+                    <div className="text-3xs font-semibold text-[#444746] truncate">
+                      Next: Executive Sync
+                    </div>
+                    <div className="text-3xs text-[#747775] truncate mt-0.5">
+                      11:30 AM • Google Meet
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Button with Real Google Calendar Logo */}
+              <a
+                href="https://calendar.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mt-3 rounded-xl border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] py-2 px-3 font-semibold text-xs text-[#1f1f1f] flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer group"
+              >
                 <img
                   src="/icons/calendar.png"
                   alt="Calendar"
-                  className="w-full h-full object-contain"
+                  className="w-4 h-4 object-contain group-hover:scale-110 transition-transform"
                 />
-              </div>
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#34A853] border-2 border-white" />
+                <span>Open Calendar</span>
+                <ExternalLink className="w-3 h-3 text-[#747775] ml-auto" />
+              </a>
             </div>
 
-            {/* Tasks Icon */}
-            <div className="relative group" title="Google Tasks: Connected & Synchronized">
-              <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+            {/* Column 3: Tasks Insights & Info */}
+            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4.5 flex flex-col justify-between shadow-xs hover:border-[#0b57d0]/40 transition-all">
+              <div>
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#e0e3e7]/80">
+                  <span className="text-xs font-bold text-[#1f1f1f] tracking-tight truncate">
+                    Tasks Insights &amp; Info
+                  </span>
+                  <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-[#e6f4ea] text-[#137333] shrink-0">
+                    Priority Queue
+                  </span>
+                </div>
+
+                <div className="mt-3.5 space-y-3">
+                  <div>
+                    <div className="text-2xl font-extrabold text-[#1f1f1f] tracking-tight">
+                      8
+                    </div>
+                    <div className="text-2xs font-medium text-[#747775]">
+                      Active tasks pending
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e0e3e7]/60">
+                    <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
+                      <div className="text-xs font-bold text-[#1f1f1f]">2 Due today</div>
+                      <div className="text-3xs text-[#747775]">Urgent</div>
+                    </div>
+                    <div className="bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/60">
+                      <div className="text-xs font-bold text-[#146c2e]">0 Overdue</div>
+                      <div className="text-3xs text-[#747775]">On track</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#f8fafd] p-2.5 rounded-xl border border-[#e0e3e7]/60">
+                    <div className="text-3xs font-semibold text-[#444746] truncate">
+                      Top Priority Action
+                    </div>
+                    <div className="text-3xs text-[#747775] truncate mt-0.5">
+                      Q4 security token rotation protocol
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Button with Real Google Tasks Logo */}
+              <a
+                href="https://tasks.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mt-3 rounded-xl border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] py-2 px-3 font-semibold text-xs text-[#1f1f1f] flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer group"
+              >
                 <img
                   src="/icons/tasks.svg"
                   alt="Tasks"
-                  className="w-full h-full object-contain"
+                  className="w-4 h-4 object-contain group-hover:scale-110 transition-transform"
                 />
+                <span>Open Tasks</span>
+                <ExternalLink className="w-3 h-3 text-[#747775] ml-auto" />
+              </a>
+            </div>
+          </div>
+
+          {/* Right Executive Panel & Quick Actions (40% Width) */}
+          <div className="w-full lg:w-[40%] flex flex-col justify-between gap-3 lg:gap-3.5 min-h-0">
+            {/* User Profile Card + Dynamic Greeting + IST Timer */}
+            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4.5 shadow-xs">
+              <div className="flex items-center gap-4">
+                {/* Google Avatar Circle */}
+                <div className="relative shrink-0">
+                  {displayAvatar ? (
+                    <img
+                      src={displayAvatar}
+                      alt={displayName}
+                      referrerPolicy="no-referrer"
+                      className="w-16 h-16 rounded-full object-cover border-2 border-[#d3e3fd] shadow-2xs"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-[#0b57d0] text-white flex items-center justify-center text-lg font-bold border-2 border-[#d3e3fd] shadow-2xs">
+                      {initials || "AN"}
+                    </div>
+                  )}
+                  <div
+                    className="absolute bottom-0 right-0 w-4.5 h-4.5 rounded-full bg-[#34A853] border-2 border-white flex items-center justify-center text-white"
+                    title="Google Verified"
+                  >
+                    <ShieldCheck className="w-2.5 h-2.5" />
+                  </div>
+                </div>
+
+                {/* User Name, Age, Role */}
+                <div className="min-w-0 flex-1">
+                  <div className="text-base font-bold text-[#1f1f1f] truncate leading-tight">
+                    {displayName}
+                  </div>
+                  <div className="text-xs font-semibold text-[#0b57d0] mt-0.5 truncate">
+                    {displayRole} • Age {displayAge}
+                  </div>
+                  <div className="text-2xs text-[#747775] truncate mt-0.5">
+                    {displayEmail}
+                  </div>
+                </div>
               </div>
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#34A853] border-2 border-white" />
+
+              {/* Dynamic Greeting & Live Timer in IST with Seconds */}
+              <div className="mt-3.5 pt-3 border-t border-[#e0e3e7]/80 flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-[#1f1f1f]">
+                    {greeting}, {displayName.split(" ")[0]}
+                  </div>
+                  <div className="text-2xs text-[#747775]">
+                    Schedule: {displayPreference}
+                  </div>
+                </div>
+
+                {/* IST Timer */}
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#f0f4f9] border border-[#e0e3e7] font-mono text-2xs font-semibold text-[#1f1f1f]">
+                  <Clock className="w-3 h-3 text-[#0b57d0]" />
+                  <span>{istTime || "Loading IST..."}</span>
+                </div>
+              </div>
             </div>
 
-            {/* Plus Button to Connect More Apps */}
-            <button
-              onClick={() => setIsConnectModalOpen(true)}
-              className="w-9 h-9 rounded-xl border border-dashed border-[#747775]/50 hover:border-[#0b57d0] hover:bg-[#d3e3fd]/20 text-[#747775] hover:text-[#0b57d0] flex items-center justify-center transition-all cursor-pointer"
-              title="Connect More Applications"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+            {/* Quick Actions AI Box with Bottom 1-Line Controls */}
+            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4.5 shadow-xs flex-1 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f]">
+                    <Sparkles className="w-3.5 h-3.5 text-[#0b57d0]" />
+                    <span>AI Recommended Action</span>
+                  </div>
+                  <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-[#e8f0fe] text-[#0b57d0]">
+                    Ready
+                  </span>
+                </div>
+
+                <div className="text-xs text-[#444746] leading-relaxed bg-[#f8fafd] p-2.5 rounded-xl border border-[#e0e3e7]/80">
+                  Reschedule Client Debrief to 3:30 PM to honor your protected focus block rule.
+                </div>
+              </div>
+
+              {/* Bottom 1-Line Controls (Mobile Notify + AI Mode) */}
+              <div className="mt-3 pt-2.5 border-t border-[#e0e3e7]/80 flex items-center gap-2">
+                <button
+                  onClick={() => setMobileNotify(!mobileNotify)}
+                  className={`flex-1 py-1.5 px-2 rounded-xl border text-2xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    mobileNotify
+                      ? "bg-[#e8f5e9] border-[#c8e6c9] text-[#2e7d32]"
+                      : "bg-[#f8fafd] border-[#e0e3e7] text-[#444746] hover:bg-[#f0f4f9]"
+                  }`}
+                  title="Toggle Call / Push Notifications over Mobile"
+                >
+                  <PhoneCall className="w-3 h-3" />
+                  <span>{mobileNotify ? "Notify: ON" : "Call on Mobile"}</span>
+                </button>
+
+                <button
+                  onClick={() =>
+                    setAiMode(aiMode === "safe" ? "turbo" : "safe")
+                  }
+                  className={`flex-1 py-1.5 px-2 rounded-xl border text-2xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    aiMode === "turbo"
+                      ? "bg-[#fff3e0] border-[#ffe0b2] text-[#e65100]"
+                      : "bg-[#e8f0fe] border-[#d3e3fd] text-[#0b57d0]"
+                  }`}
+                  title="Toggle AI Autonomy Mode"
+                >
+                  <Zap className="w-3 h-3" />
+                  <span>{aiMode === "safe" ? "Mode: Safe Read" : "Mode: Turbo"}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Bottom Middle (6 cols): Chat Input for the AI */}
-        <div className="lg:col-span-6 border border-[#e0e3e7] bg-white rounded-2xl p-2.5 lg:p-3 shadow-xs flex flex-col justify-between">
-          <form onSubmit={handleSendChat} className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-[#d3e3fd] text-[#0b57d0] flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4" />
+        {/* 3. Bottom Row (3 Columns as per Wireframe) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-3.5 shrink-0">
+          {/* Bottom Left (3 cols): Connected Apps with Icons & Plus Button */}
+          <div className="lg:col-span-3 border border-[#e0e3e7] bg-white rounded-2xl p-3 lg:p-3.5 shadow-xs flex flex-col justify-between">
+            <div className="text-2xs font-bold text-[#747775] uppercase tracking-wider mb-2">
+              Connected Workspace Apps
             </div>
 
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Ask PACT AI to draft an email, reschedule a meeting, or query your tasks..."
-              className="flex-1 bg-transparent px-2 py-1.5 text-xs text-[#1f1f1f] placeholder:text-[#747775] focus:outline-none"
-            />
+            <div className="flex items-center gap-3">
+              {/* Gmail Icon */}
+              <div className="relative group" title="Gmail: Connected & Synchronized">
+                <div className="w-8.5 h-8.5 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+                  <img
+                    src="/icons/gmail.png"
+                    alt="Gmail"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#34A853] border-2 border-white" />
+              </div>
 
+              {/* Calendar Icon */}
+              <div className="relative group" title="Google Calendar: Connected & Synchronized">
+                <div className="w-8.5 h-8.5 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+                  <img
+                    src="/icons/calendar.png"
+                    alt="Calendar"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#34A853] border-2 border-white" />
+              </div>
+
+              {/* Tasks Icon */}
+              <div className="relative group" title="Google Tasks: Connected & Synchronized">
+                <div className="w-8.5 h-8.5 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+                  <img
+                    src="/icons/tasks.svg"
+                    alt="Tasks"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#34A853] border-2 border-white" />
+              </div>
+
+              {/* Plus Button to Connect More Apps */}
+              <button
+                onClick={() => setIsConnectModalOpen(true)}
+                className="w-8.5 h-8.5 rounded-xl border border-dashed border-[#747775]/50 hover:border-[#0b57d0] hover:bg-[#d3e3fd]/20 text-[#747775] hover:text-[#0b57d0] flex items-center justify-center transition-all cursor-pointer"
+                title="Connect More Applications"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Bottom Middle (6 cols): Chat Input for the AI */}
+          <div className="lg:col-span-6 border border-[#e0e3e7] bg-white rounded-2xl p-2.5 lg:p-3 shadow-xs flex flex-col justify-between">
+            <form onSubmit={handleSendChat} className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-[#d3e3fd] text-[#0b57d0] flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Ask PACT AI to draft an email, reschedule a meeting, or query your tasks..."
+                className="flex-1 bg-transparent px-2 py-1.5 text-xs text-[#1f1f1f] placeholder:text-[#747775] focus:outline-none"
+              />
+
+              <button
+                type="button"
+                className="p-1.5 rounded-full text-[#747775] hover:text-[#1f1f1f] hover:bg-[#f0f4f9] transition-colors cursor-pointer"
+                title="Voice Input"
+              >
+                <Mic className="w-4 h-4" />
+              </button>
+
+              <button
+                type="submit"
+                disabled={!chatInput.trim()}
+                className="w-8 h-8 rounded-full bg-[#0b57d0] text-white flex items-center justify-center shrink-0 transition-transform active:scale-95 disabled:opacity-40 cursor-pointer shadow-xs"
+                title="Send Command"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </form>
+
+            {/* Quick Command Suggestions */}
+            <div className="flex items-center gap-1.5 mt-2 overflow-x-auto no-scrollbar">
+              <span className="text-3xs text-[#747775] shrink-0 font-medium">
+                Suggestions:
+              </span>
+              <button
+                onClick={() =>
+                  setChatInput("Reschedule Client Technical Debrief to 3:30 PM")
+                }
+                className="px-2 py-0.5 rounded-full bg-[#f0f4f9] hover:bg-[#e4ebf5] text-3xs text-[#444746] shrink-0 transition-colors cursor-pointer"
+              >
+                Reschedule conflict
+              </button>
+              <button
+                onClick={() =>
+                  setChatInput("Summarize unread emails from Sarah Lin")
+                }
+                className="px-2 py-0.5 rounded-full bg-[#f0f4f9] hover:bg-[#e4ebf5] text-3xs text-[#444746] shrink-0 transition-colors cursor-pointer"
+              >
+                Summarize unread
+              </button>
+              <button
+                onClick={() =>
+                  setChatInput("List all priority tasks due today")
+                }
+                className="px-2 py-0.5 rounded-full bg-[#f0f4f9] hover:bg-[#e4ebf5] text-3xs text-[#444746] shrink-0 transition-colors cursor-pointer"
+              >
+                Tasks due today
+              </button>
+            </div>
+          </div>
+
+          {/* Bottom Right (3 cols): Usable Buttons (Preferences, Settings, Theme) */}
+          <div className="lg:col-span-3 border border-[#e0e3e7] bg-white rounded-2xl p-3 lg:p-3.5 shadow-xs flex items-center justify-between gap-2">
+            {/* Update Preference Button */}
             <button
-              type="button"
-              className="p-1.5 rounded-full text-[#747775] hover:text-[#1f1f1f] hover:bg-[#f0f4f9] transition-colors cursor-pointer"
-              title="Voice Input"
+              onClick={() => {
+                setEditAge(String(displayAge));
+                setEditRole(displayRole);
+                setEditPref(displayPreference);
+                setIsPrefModalOpen(true);
+              }}
+              className="flex-1 py-2 px-2 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-2xs font-semibold text-[#1f1f1f] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
+              title="Update Working Preferences & Role"
             >
-              <Mic className="w-4 h-4" />
+              <Sliders className="w-3.5 h-3.5 text-[#0b57d0]" />
+              <span className="truncate">Preferences</span>
             </button>
 
+            {/* Settings Button */}
             <button
-              type="submit"
-              disabled={!chatInput.trim()}
-              className="w-8 h-8 rounded-full bg-[#0b57d0] text-white flex items-center justify-center shrink-0 transition-transform active:scale-95 disabled:opacity-40 cursor-pointer shadow-xs"
-              title="Send Command"
+              onClick={() => setIsSettingsModalOpen(true)}
+              className="flex-1 py-2 px-2 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-2xs font-semibold text-[#1f1f1f] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
+              title="System & Security Settings"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Settings className="w-3.5 h-3.5 text-[#444746]" />
+              <span className="truncate">Settings</span>
             </button>
-          </form>
 
-          {/* Quick Command Suggestions */}
-          <div className="flex items-center gap-1.5 mt-2 overflow-x-auto no-scrollbar">
-            <span className="text-3xs text-[#747775] shrink-0 font-medium">
-              Suggestions:
-            </span>
+            {/* Theme Button */}
             <button
-              onClick={() =>
-                setChatInput("Reschedule Client Technical Debrief to 3:30 PM")
-              }
-              className="px-2 py-0.5 rounded-full bg-[#f0f4f9] hover:bg-[#e4ebf5] text-3xs text-[#444746] shrink-0 transition-colors cursor-pointer"
+              className="flex-1 py-2 px-2 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-2xs font-semibold text-[#1f1f1f] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
+              title="Theme Toggle"
             >
-              Reschedule conflict
-            </button>
-            <button
-              onClick={() =>
-                setChatInput("Summarize unread emails from Sarah Lin")
-              }
-              className="px-2 py-0.5 rounded-full bg-[#f0f4f9] hover:bg-[#e4ebf5] text-3xs text-[#444746] shrink-0 transition-colors cursor-pointer"
-            >
-              Summarize unread
-            </button>
-            <button
-              onClick={() =>
-                setChatInput("List all priority tasks due today")
-              }
-              className="px-2 py-0.5 rounded-full bg-[#f0f4f9] hover:bg-[#e4ebf5] text-3xs text-[#444746] shrink-0 transition-colors cursor-pointer"
-            >
-              Tasks due today
+              <Sun className="w-3.5 h-3.5 text-[#f9ab00]" />
+              <span className="truncate">Theme</span>
             </button>
           </div>
         </div>
-
-        {/* Bottom Right (3 cols): Usable Buttons (Preferences, Settings, Theme) */}
-        <div className="lg:col-span-3 border border-[#e0e3e7] bg-white rounded-2xl p-3.5 lg:p-4 shadow-xs flex items-center justify-between gap-2">
-          {/* Update Preference Button */}
-          <button
-            onClick={() => {
-              setEditAge(String(displayAge));
-              setEditRole(displayRole);
-              setEditPref(displayPreference);
-              setIsPrefModalOpen(true);
-            }}
-            className="flex-1 py-2 px-2.5 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-2xs font-semibold text-[#1f1f1f] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
-            title="Update Working Preferences & Role"
-          >
-            <Sliders className="w-3.5 h-3.5 text-[#0b57d0]" />
-            <span className="truncate">Preferences</span>
-          </button>
-
-          {/* Settings Button */}
-          <button
-            onClick={() => setIsSettingsModalOpen(true)}
-            className="flex-1 py-2 px-2.5 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-2xs font-semibold text-[#1f1f1f] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
-            title="System & Security Settings"
-          >
-            <Settings className="w-3.5 h-3.5 text-[#444746]" />
-            <span className="truncate">Settings</span>
-          </button>
-
-          {/* Theme Button */}
-          <button
-            className="flex-1 py-2 px-2.5 rounded-xl border border-[#e0e3e7] bg-[#f8fafd] hover:bg-[#f0f4f9] active:bg-[#e4ebf5] text-2xs font-semibold text-[#1f1f1f] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs"
-            title="Theme Toggle"
-          >
-            <Sun className="w-3.5 h-3.5 text-[#f9ab00]" />
-            <span className="truncate">Theme</span>
-          </button>
-        </div>
-      </div>
+      </main>
 
       {/* Modal: Update Preferences */}
       <Modal

@@ -1,5 +1,6 @@
 import time
 import uuid
+import threading
 from typing import Dict, Any, Callable, Optional, Tuple
 from agent.db.connection import DatabaseManager, db_manager
 from agent.db.audit_repo import AuditRepository
@@ -19,6 +20,7 @@ class ToolRegistry:
         self.email_adapter = MockEmailAdapter(manager)
         self.calendar_adapter = MockCalendarAdapter(manager)
         self.task_adapter = MockTaskAdapter(manager)
+        self._lock = threading.Lock()
 
         # Mapping: tool_name -> (handler_fn, RiskTier, verifier_fn)
         self._tools: Dict[str, Tuple[Callable, RiskTier, Optional[Callable]]] = {}
@@ -39,6 +41,23 @@ class ToolRegistry:
         return RiskTier.TIER_1_CONSEQUENTIAL  # Default safe: unknown tools require clearance
 
     def execute_tool(
+        self,
+        tool_name: str,
+        parameters: Dict[str, Any],
+        run_id: str,
+        step_id: str,
+        idempotency_key: str,
+    ) -> ToolExecutionResult:
+        with self._lock:
+            return self._execute_tool_locked(
+                tool_name=tool_name,
+                parameters=parameters,
+                run_id=run_id,
+                step_id=step_id,
+                idempotency_key=idempotency_key,
+            )
+
+    def _execute_tool_locked(
         self,
         tool_name: str,
         parameters: Dict[str, Any],
@@ -239,6 +258,11 @@ class ToolRegistry:
             self.task_adapter.complete_task,
             RiskTier.TIER_1_CONSEQUENTIAL,
             verifier=self._verify_task_completed,
+        )
+        self.register_tool(
+            "reopen_task",
+            self.task_adapter.reopen_task,
+            RiskTier.TIER_0_SAFE,
         )
 
     # --- Verification Handlers (Closed-Loop Post-Conditions) ---

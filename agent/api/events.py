@@ -53,11 +53,14 @@ async def sync_gen_to_async(sync_gen) -> AsyncGenerator[Dict[str, Any], None]:
                 event_name = item.get("event", "message")
                 raw_data = item.get("data", {})
                 payload = json.dumps(raw_data) if not isinstance(raw_data, str) else raw_data
-                loop.call_soon_threadsafe(q.put_nowait, {"event": event_name, "data": payload})
+                if not loop.is_closed():
+                    loop.call_soon_threadsafe(q.put_nowait, {"event": event_name, "data": payload})
         except Exception as e:
-            loop.call_soon_threadsafe(q.put_nowait, e)
+            if not loop.is_closed():
+                loop.call_soon_threadsafe(q.put_nowait, e)
         finally:
-            loop.call_soon_threadsafe(q.put_nowait, DONE)
+            if not loop.is_closed():
+                loop.call_soon_threadsafe(q.put_nowait, DONE)
 
     thread = threading.Thread(target=worker, daemon=True)
     thread.start()

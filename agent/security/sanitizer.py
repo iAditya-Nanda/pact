@@ -27,14 +27,15 @@ class SecurityCheckResult(BaseModel):
 class SecuritySanitizer:
     # High-severity injection signatures
     INJECTION_SIGNATURES = [
-        (r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|rules)", ThreatCategory.PROMPT_INJECTION, 0.95),
+        (r"ignore\s+(all\s+)?(previous|prior|above|safety)?\s*(instructions|prompts|rules|constraints)", ThreatCategory.PROMPT_INJECTION, 0.95),
         (r"(system|admin|root|superuser)\s+override", ThreatCategory.SYSTEM_OVERRIDE, 0.90),
         (r"(bypass|disable|skip|ignore)\s+(all\s+)?(clearance|approval|confirmation|human\s+check)", ThreatCategory.CLEARANCE_BYPASS, 0.95),
-        (r"(dan\s+mode|jailbreak|developer\s+mode\s+enabled)", ThreatCategory.JAILBREAK_ATTEMPT, 0.90),
+        (r"(you\s+are\s+now\s+dan|dan\s+mode|\bjailbreak\b|developer\s+mode)", ThreatCategory.JAILBREAK_ATTEMPT, 0.95),
         (r"(output|print|reveal|display|leak)\s+(your\s+)?(system\s+prompt|initial\s+prompt|hidden\s+instructions)", ThreatCategory.PROMPT_INJECTION, 0.85),
         (r"(exfiltrate|send|forward|upload)\b.*?\b(data|passwords|tokens|keys|emails|credentials|contacts)\b.*?\bto\s+https?://", ThreatCategory.DATA_EXFILTRATION, 0.98),
-        (r"(curl|wget|nc|bash\s+-i|/bin/sh)\s+", ThreatCategory.SYSTEM_OVERRIDE, 0.95),
-        (r"disregard\s+(hard\s+constraints|user\s+preferences|security\s+rules)", ThreatCategory.CLEARANCE_BYPASS, 0.92),
+        (r"\b(curl|wget|nc|rm\s+-rf)\b|bash\s+-i|/bin/sh", ThreatCategory.SYSTEM_OVERRIDE, 0.95),
+        (r"disregard\s+(all\s+)?(safety\s+|hard\s+)?(constraints|user\s+preferences|security\s+rules|rules)", ThreatCategory.CLEARANCE_BYPASS, 0.92),
+        (r"(---\s*(end|start)\s+of\s+(instructions|prompt|system)|\bnow\s+do\s+anything\b)", ThreatCategory.PROMPT_INJECTION, 0.95),
     ]
 
     def __init__(self, manager: DatabaseManager = db_manager):

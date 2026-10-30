@@ -80,6 +80,20 @@ class MockTaskAdapter(ITaskService):
             },
         }
 
+    def reopen_task(
+        self,
+        task_id: Optional[str] = None,
+        idempotency_key: str = "",
+        **kwargs,
+    ) -> Dict[str, Any]:
+        tid = task_id or kwargs.get("id") or "task_001"
+        with self.manager.get_connection() as conn:
+            conn.execute(
+                "UPDATE mock_tasks SET status = 'PENDING' WHERE task_id = ?",
+                (tid,),
+            )
+        return {"task_id": tid, "status": "PENDING", "completed": False}
+
     def _row_to_model(self, row) -> TaskItem:
         return TaskItem(
             task_id=row["task_id"],

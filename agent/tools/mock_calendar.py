@@ -83,15 +83,19 @@ class MockCalendarAdapter(ICalendarService):
                 """,
                 (event_id, t_title, description, s_time, e_time, json.dumps(attendees_list)),
             )
-        return CalendarEvent(
-            event_id=event_id,
-            title=t_title,
-            description=description,
-            start_time=s_time,
-            end_time=e_time,
-            attendees=attendees_list,
-            status="CONFIRMED",
-        )
+        return {
+            "event_id": event_id,
+            "title": t_title,
+            "description": description,
+            "start_time": s_time,
+            "end_time": e_time,
+            "attendees": attendees_list,
+            "status": "CONFIRMED",
+            "compensating_action": {
+                "tool_name": "cancel_calendar_event",
+                "parameters": {"event_id": event_id},
+            },
+        }
 
     def reschedule_event(
         self,
@@ -163,6 +167,10 @@ class MockCalendarAdapter(ICalendarService):
     ) -> Dict[str, Any]:
         evt_id = event_id or kwargs.get("id") or "evt_001"
         with self.manager.get_connection() as conn:
+            existing = conn.execute(
+                "SELECT * FROM mock_calendar_events WHERE event_id = ?",
+                (evt_id,),
+            ).fetchone()
             conn.execute(
                 "UPDATE mock_calendar_events SET status = 'CANCELLED' WHERE event_id = ?",
                 (evt_id,),
@@ -171,6 +179,14 @@ class MockCalendarAdapter(ICalendarService):
             "event_id": evt_id,
             "status": "CANCELLED",
             "reason": reason,
+            "compensating_action": {
+                "tool_name": "reschedule_calendar_event",
+                "parameters": {
+                    "event_id": evt_id,
+                    "new_start": existing["start_time"] if existing else "2026-10-31 14:00:00",
+                    "new_end": existing["end_time"] if existing else "2026-10-31 15:00:00",
+                },
+            },
         }
 
     def _row_to_model(self, row) -> CalendarEvent:

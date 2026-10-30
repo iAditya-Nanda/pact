@@ -22,7 +22,14 @@ class DAGPlanningService:
         Computes deterministic idempotency keys for all planned steps.
         """
         active_run_id = run_id or f"run_{uuid.uuid4().hex[:12]}"
-        pref_descriptions = [f"- {p.rule_key} ({p.constraint_type.value}): {p.description}" for p in (preferences or [])]
+        pref_descriptions = []
+        for p in (preferences or []):
+            if hasattr(p, "rule_key") and hasattr(p, "constraint_type"):
+                pref_descriptions.append(f"- {p.rule_key} ({p.constraint_type.value}): {p.description}")
+            elif isinstance(p, dict):
+                pref_descriptions.append(f"- {p.get('rule_key', '')} ({p.get('constraint_type', 'SOFT')}): {p.get('description', '')}")
+            elif isinstance(p, str):
+                pref_descriptions.append(f"- {p}")
         prefs_text = "\n".join(pref_descriptions) if pref_descriptions else "No active preferences."
 
         prompt = f"""

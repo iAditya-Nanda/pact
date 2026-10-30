@@ -163,7 +163,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
                   : "text-[#747775] dark:text-[#8e9099]"
               }`}
             >
-              All Active
+              All
             </button>
             <button
               onClick={() => setFilter("today")}
@@ -173,7 +173,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
                   : "text-[#747775] dark:text-[#8e9099]"
               }`}
             >
-              Due Today ({dueTodayCount})
+              Due Today
             </button>
             <button
               onClick={() => setFilter("starred")}
@@ -183,7 +183,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
                   : "text-[#747775] dark:text-[#8e9099]"
               }`}
             >
-              Starred ({starredIds.size})
+              Starred
             </button>
           </div>
         </div>

@@ -164,7 +164,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     : "text-[#747775] dark:text-[#8e9099]"
                 }`}
               >
-                Schedule ({events.length})
+                Schedule
               </button>
             </div>
           )}

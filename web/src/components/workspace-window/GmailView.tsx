@@ -122,26 +122,18 @@ export const GmailView: React.FC<GmailViewProps> = ({
     <div className="h-full flex flex-col bg-white dark:bg-[#1a1c22] text-[#1f1f1f] dark:text-[#e2e2e6] overflow-hidden">
       {/* Top Action Bar */}
       <div className="h-12 border-b border-[#e0e3e7] dark:border-[#34373d] px-4 flex items-center justify-between gap-3 bg-[#f8fafd] dark:bg-[#1f2229] shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {/* Active Mode Pill */}
-          <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-white dark:bg-[#16181d] border border-[#e0e3e7] dark:border-[#34373d]">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-white dark:bg-[#16181d] border border-[#e0e3e7] dark:border-[#34373d] shrink-0">
             <span className="w-2 h-2 rounded-full bg-[#1e8e3e]" />
             <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">
-              Workspace Stream (Live)
+              Workspace Stream
             </span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-2xs text-[#747775] dark:text-[#8e9099] ml-2">
-            <span className="font-semibold text-[#1f1f1f] dark:text-white">
-              {unreadCount} unread
-            </span>
-            <span>•</span>
-            <span className="font-medium text-[#1f1f1f] dark:text-[#e2e2e6]">
-              {emails.length} messages this month
-            </span>
-            <span>•</span>
-            <span className="truncate">{userEmail}</span>
-          </div>
+          <span className="text-xs text-[#747775] dark:text-[#8e9099] truncate hidden lg:inline">
+            {userEmail}
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -297,7 +289,7 @@ export const GmailView: React.FC<GmailViewProps> = ({
                     : "text-[#747775] dark:text-[#8e9099] hover:bg-[#e0e3e7]/50 dark:hover:bg-[#282a2f]"
                 }`}
               >
-                All ({emails.length})
+                All
               </button>
               <button
                 onClick={() => setSubFilter("unread")}
@@ -307,7 +299,7 @@ export const GmailView: React.FC<GmailViewProps> = ({
                     : "text-[#747775] dark:text-[#8e9099] hover:bg-[#e0e3e7]/50 dark:hover:bg-[#282a2f]"
                 }`}
               >
-                Unread ({unreadCount})
+                Unread
               </button>
               <button
                 onClick={() => setSubFilter("important")}

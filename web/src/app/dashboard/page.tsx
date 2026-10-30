@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
-import Link from "next/link";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -14,53 +13,63 @@ import {
   Clock,
   Briefcase,
   Cake,
-  Loader2,
 } from "lucide-react";
 
 export default function DashboardPage() {
   const { user, isLoading, logout } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
-  // Redirect to login if user is definitely not signed in
   useEffect(() => {
-    if (!isLoading && !user) {
-      // Check localStorage directly for immediate recovery
-      const cached =
-        typeof window !== "undefined"
-          ? localStorage.getItem("pact_auth_user")
-          : null;
-      if (!cached) {
-        router.push("/login");
+    setMounted(true);
+  }, []);
+
+  // Retrieve cached user synchronously from localStorage if available
+  const [localCache, setLocalCache] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("pact_auth_user");
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {}
       }
     }
-  }, [user, isLoading, router]);
+    return null;
+  });
 
-  if (isLoading && !user) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-[#f8fafd] select-none">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-[#0b57d0]" />
-          <span className="text-sm font-medium text-[#444746]">
-            Restoring authenticated session...
-          </span>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("pact_auth_user");
+      if (stored) {
+        try {
+          setLocalCache(JSON.parse(stored));
+        } catch {}
+      }
+    }
+  }, [user]);
 
-  // Active user data (from Google Auth & onboarding calibration)
-  const displayName = user?.fullName || "Aditya Nanda";
-  const displayEmail = user?.email || "adityananda.dev@gmail.com";
-  const displayAvatar = user?.avatarUrl || "";
-  const displayRole = user?.role || "Lead Architect";
-  const displayAge = user?.age || 24;
+  const activeUser = user || localCache;
+
+  // Redirect to login only if confirmed unauthenticated after mount
+  useEffect(() => {
+    if (mounted && !isLoading && !activeUser) {
+      router.push("/login");
+    }
+  }, [mounted, isLoading, activeUser, router]);
+
+  // Dynamic user data from Google Auth & onboarding profile
+  const displayName = activeUser?.fullName || "Aditya Nanda";
+  const displayEmail = activeUser?.email || "adityananda.dev@gmail.com";
+  const displayAvatar = activeUser?.avatarUrl || "";
+  const displayRole = activeUser?.role || "Lead Architect";
+  const displayAge = activeUser?.age || 24;
   const displayPreference =
-    user?.schedulePreference || "Avoid meetings before 10:00 AM";
+    activeUser?.schedulePreference || "Avoid meetings before 10:00 AM";
 
   // Derive initial letters for avatar fallback
   const initials = displayName
     .split(" ")
-    .map((part) => part[0])
+    .map((part: string) => part[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);

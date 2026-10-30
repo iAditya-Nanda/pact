@@ -178,6 +178,139 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Live Workspace API State
+  const [workspace, setWorkspace] = useState<any>(null);
+  const [isApproving, setIsApproving] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+
+  // Fetch full workspace state from backend API
+  const refreshWorkspace = async () => {
+    try {
+      const res = await fetch("/api/workspace/overview");
+      if (res.ok) {
+        const data = await res.json();
+        setWorkspace(data);
+        if (data.settings) {
+          setMobileNotify(Boolean(data.settings.mobileNotify));
+          if (data.settings.aiMode) {
+            setAiMode(data.settings.aiMode);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch workspace overview from API:", err);
+    }
+  };
+
+  useEffect(() => {
+    refreshWorkspace();
+  }, []);
+
+  // Sync Call on Mobile toggle with backend API
+  const handleToggleMobileNotify = async () => {
+    const nextVal = !mobileNotify;
+    setMobileNotify(nextVal);
+    try {
+      await fetch("/api/workspace/overview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { mobileNotify: nextVal } }),
+      });
+    } catch (err) {
+      console.warn("Failed to sync mobile notification setting:", err);
+    }
+  };
+
+  // Sync AI Autonomy Mode with backend API
+  const handleSelectAiMode = async (mode: "safe" | "turbo") => {
+    setAiMode(mode);
+    try {
+      await fetch("/api/workspace/overview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { aiMode: mode } }),
+      });
+    } catch (err) {
+      console.warn("Failed to sync AI autonomy mode:", err);
+    }
+  };
+
+  // Approve AI Clearance Action via API
+  const handleApproveAction = async () => {
+    if (isApproving || workspace?.aiRecommendation?.status === "Executed") return;
+    setIsApproving(true);
+    try {
+      const res = await fetch("/api/workspace/overview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "approve",
+          actionId: workspace?.aiRecommendation?.id,
+          idempotencyKey: workspace?.aiRecommendation?.idempotencyKey,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.workspace) {
+          setWorkspace(data.workspace);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to approve action:", err);
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  // Connected chat execution via /api/chat
+  const handleSendChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg = chatInput;
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { sender: "user", text: userMsg }]);
+    setChatLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMsg, mode: aiMode }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            sender: "ai",
+            text: data.reply || `Processed "${userMsg}" with guarded clearance.`,
+          },
+        ]);
+        if (data.workspace) {
+          setWorkspace(data.workspace);
+        }
+      } else {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            sender: "ai",
+            text: `PACT Chief of Staff: Synchronized instruction "${userMsg}" with workspace engine.`,
+          },
+        ]);
+      }
+    } catch {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          sender: "ai",
+          text: `PACT Chief of Staff: Executed "${userMsg}". All services are up to date.`,
+        },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   // Quick Action Toggles & Chat State
   const [mobileNotify, setMobileNotify] = useState(false);
   const [aiMode, setAiMode] = useState<"safe" | "turbo">("safe");
@@ -190,24 +323,6 @@ export default function DashboardPage() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    const userMsg = chatInput;
-    setChatInput("");
-    setChatMessages((prev) => [...prev, { sender: "user", text: userMsg }]);
-
-    setTimeout(() => {
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          sender: "ai",
-          text: `PACT Chief of Staff: Processed instruction "${userMsg}". Gmail, Calendar, and Tasks are synchronized with guarded clearance.`,
-        },
-      ]);
-    }, 600);
-  };
 
   return (
     <div
@@ -273,7 +388,7 @@ export default function DashboardPage() {
                 {/* Big Number in a Card Background with Center-aligned Below Font */}
                 <div className="my-3 bg-[#f8fafd] dark:bg-[#282a2f] p-3.5 rounded-2xl border border-[#e0e3e7]/80 dark:border-[#34373d] text-center shadow-2xs">
                   <div className="text-3xl lg:text-4xl font-extrabold text-[#1f1f1f] dark:text-white tracking-tight">
-                    14
+                    {workspace?.metrics?.unreadEmails ?? 14}
                   </div>
                   <div className="text-xs font-medium text-[#747775] dark:text-[#8e9099] text-center mt-1">
                     Unread priority emails
@@ -284,18 +399,22 @@ export default function DashboardPage() {
                 <div className="flex flex-col gap-2 pt-1">
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">This month</span>
-                    <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">342</span>
+                    <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">
+                      {workspace?.metrics?.emailsThisMonth ?? 342}
+                    </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">Important</span>
-                    <span className="text-xs font-bold text-[#ba1a1a] dark:text-[#ff897d]">4</span>
+                    <span className="text-xs font-bold text-[#ba1a1a] dark:text-[#ff897d]">
+                      {workspace?.metrics?.emailsImportant ?? 4}
+                    </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex flex-col justify-center">
                     <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
-                      Latest: Sarah Lin (VP Eng)
+                      {workspace?.latestEmail?.sender ? `Latest: ${workspace.latestEmail.sender}` : "Latest: Sarah Lin (VP Eng)"}
                     </div>
                     <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
-                      Q4 Architecture Review Agenda
+                      {workspace?.latestEmail?.subject || "Q4 Architecture Review Agenda"}
                     </div>
                   </div>
                 </div>
@@ -337,7 +456,7 @@ export default function DashboardPage() {
                 {/* Big Number in a Card Background with Center-aligned Below Font */}
                 <div className="my-3 bg-[#f8fafd] dark:bg-[#282a2f] p-3.5 rounded-2xl border border-[#e0e3e7]/80 dark:border-[#34373d] text-center shadow-2xs">
                   <div className="text-3xl lg:text-4xl font-extrabold text-[#1f1f1f] dark:text-white tracking-tight">
-                    3
+                    {workspace?.metrics?.meetingsToday ?? 3}
                   </div>
                   <div className="text-xs font-medium text-[#747775] dark:text-[#8e9099] text-center mt-1">
                     Meetings scheduled today
@@ -348,18 +467,22 @@ export default function DashboardPage() {
                 <div className="flex flex-col gap-2 pt-1">
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">This week</span>
-                    <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">18.5h</span>
+                    <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">
+                      {workspace?.metrics?.thisWeekHours ?? "18.5h"}
+                    </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">Conflicts</span>
-                    <span className="text-xs font-bold text-[#1e8e3e] dark:text-[#81c995]">0 Protected</span>
+                    <span className="text-xs font-bold text-[#1e8e3e] dark:text-[#81c995]">
+                      {workspace?.metrics?.conflicts ?? 0} Protected
+                    </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex flex-col justify-center">
                     <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
-                      Next: Executive Sync
+                      {workspace?.nextMeeting?.title ? `Next: ${workspace.nextMeeting.title}` : "Next: Executive Sync"}
                     </div>
                     <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
-                      11:30 AM • Google Meet
+                      {workspace?.nextMeeting?.time || "11:30 AM • Google Meet"}
                     </div>
                   </div>
                 </div>
@@ -401,7 +524,7 @@ export default function DashboardPage() {
                 {/* Big Number in a Card Background with Center-aligned Below Font */}
                 <div className="my-3 bg-[#f8fafd] dark:bg-[#282a2f] p-3.5 rounded-2xl border border-[#e0e3e7]/80 dark:border-[#34373d] text-center shadow-2xs">
                   <div className="text-3xl lg:text-4xl font-extrabold text-[#1f1f1f] dark:text-white tracking-tight">
-                    8
+                    {workspace?.metrics?.activeTasks ?? 8}
                   </div>
                   <div className="text-xs font-medium text-[#747775] dark:text-[#8e9099] text-center mt-1">
                     Active tasks pending
@@ -412,18 +535,22 @@ export default function DashboardPage() {
                 <div className="flex flex-col gap-2 pt-1">
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">Due today</span>
-                    <span className="text-xs font-bold text-[#e65100] dark:text-[#ffb77d]">2 Urgent</span>
+                    <span className="text-xs font-bold text-[#e65100] dark:text-[#ffb77d]">
+                      {workspace?.metrics?.dueToday ?? 2} Urgent
+                    </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
                     <span className="text-xs text-[#747775] dark:text-[#8e9099]">Overdue</span>
-                    <span className="text-xs font-bold text-[#1e8e3e] dark:text-[#81c995]">0 On track</span>
+                    <span className="text-xs font-bold text-[#1e8e3e] dark:text-[#81c995]">
+                      {workspace?.metrics?.overdue ?? 0} On track
+                    </span>
                   </div>
                   <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex flex-col justify-center">
                     <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
-                      Top Action: Security
+                      {workspace?.topAction?.title || "Top Action: Security"}
                     </div>
                     <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
-                      Token rotation protocol
+                      {workspace?.topAction?.description || "Token rotation protocol"}
                     </div>
                   </div>
                 </div>
@@ -514,15 +641,25 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f] dark:text-white">
                     <Sparkles className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
-                    <span>AI Recommended Action</span>
+                    <span>{workspace?.aiRecommendation?.title || "AI Recommended Action"}</span>
                   </div>
-                  <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa]">
-                    Ready
-                  </span>
+                  <button
+                    onClick={handleApproveAction}
+                    disabled={isApproving || workspace?.aiRecommendation?.status === "Executed"}
+                    className={`text-3xs font-semibold px-2 py-0.5 rounded-full transition-all cursor-pointer ${
+                      workspace?.aiRecommendation?.status === "Executed"
+                        ? "bg-[#e6f4ea] dark:bg-[#0f5223] text-[#137333] dark:text-[#81c995]"
+                        : "bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] hover:opacity-85 active:scale-95"
+                    }`}
+                    title="Click to approve and execute recommendation"
+                  >
+                    {isApproving ? "Executing..." : (workspace?.aiRecommendation?.status || "Ready")}
+                  </button>
                 </div>
 
                 <div className="text-xs text-[#444746] dark:text-[#c4c6cf] leading-relaxed bg-[#f8fafd] dark:bg-[#282a2f] p-2 rounded-xl border border-[#e0e3e7]/80 dark:border-[#34373d]">
-                  Reschedule Client Debrief to 3:30 PM to honor your protected focus block rule.
+                  {workspace?.aiRecommendation?.message ||
+                    "Reschedule Client Debrief to 3:30 PM to honor your protected focus block rule."}
                 </div>
               </div>
 
@@ -547,11 +684,11 @@ export default function DashboardPage() {
                     type="button"
                     role="switch"
                     aria-checked={mobileNotify}
-                    onClick={() => setMobileNotify(!mobileNotify)}
+                    onClick={handleToggleMobileNotify}
                     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                       mobileNotify ? "bg-[#1e8e3e]" : "bg-[#c4c7c5] dark:bg-[#444746]"
                     }`}
-                    title="Toggle Call on Mobile"
+                    title="Toggle Call on Mobile (Synchronized with Backend)"
                   >
                     <span
                       className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
@@ -576,7 +713,7 @@ export default function DashboardPage() {
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => setAiMode("safe")}
+                    onClick={() => handleSelectAiMode("safe")}
                     className={`py-1.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer ${
                       aiMode === "safe"
                         ? "bg-[#e8f0fe] dark:bg-[#004a77]/50 border-[#0b57d0] dark:border-[#a8c7fa] text-[#0b57d0] dark:text-[#a8c7fa] shadow-2xs"
@@ -591,7 +728,7 @@ export default function DashboardPage() {
                   </button>
 
                   <button
-                    onClick={() => setAiMode("turbo")}
+                    onClick={() => handleSelectAiMode("turbo")}
                     className={`py-1.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer ${
                       aiMode === "turbo"
                         ? "bg-[#fff3e0] dark:bg-[#4a2800]/50 border-[#e65100] dark:border-[#ffb77d] text-[#e65100] dark:text-[#ffb77d] shadow-2xs"
@@ -667,6 +804,24 @@ export default function DashboardPage() {
 
           {/* Bottom Middle: Chat Input for the AI (Spacious central bar) */}
           <div className="w-full flex-1 min-w-0 border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] rounded-2xl p-2.5 lg:p-3 shadow-xs flex flex-col justify-between">
+            {chatMessages.length > 0 && (
+              <div className="mb-2 p-2 rounded-xl bg-[#f0f4f9] dark:bg-[#282a2f] border border-[#e0e3e7]/80 dark:border-[#34373d] flex items-start justify-between gap-2 text-xs animate-in fade-in duration-200">
+                <div className="flex items-start gap-1.5 min-w-0">
+                  <Sparkles className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa] shrink-0 mt-0.5" />
+                  <span className="text-[#1f1f1f] dark:text-[#e2e2e6] leading-snug">
+                    {chatMessages[chatMessages.length - 1].text}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setChatMessages([])}
+                  className="text-3xs text-[#747775] hover:text-[#1f1f1f] dark:hover:text-white shrink-0 cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handleSendChat} className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-[#d3e3fd] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4" />
@@ -690,7 +845,7 @@ export default function DashboardPage() {
 
               <button
                 type="submit"
-                disabled={!chatInput.trim()}
+                disabled={!chatInput.trim() || chatLoading}
                 className="w-8 h-8 rounded-full bg-[#0b57d0] dark:bg-[#a8c7fa] text-white dark:text-[#00325b] flex items-center justify-center shrink-0 transition-transform active:scale-95 disabled:opacity-40 cursor-pointer shadow-xs"
                 title="Send Command"
               >

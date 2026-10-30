@@ -2,16 +2,19 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 export default function SignUpPage() {
+  const { loginWithGoogle, isLoading } = useAuth();
   const [formData, setFormData] = useState({
     fullName: "",
     age: "",
     role: "",
+    email: "",
     workingHours: "10:00 AM – 7:00 PM",
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -24,14 +27,15 @@ export default function SignUpPage() {
 
   const handleGoogleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    // In production / local supabase: stores profile & triggers supabase.auth.signInWithOAuth({ provider: 'google' })
-    setTimeout(() => {
-      alert(
-        `Saving profile for ${formData.fullName || "User"} (${formData.role || "Executive"}) and connecting Google account...`
-      );
-      setIsLoading(false);
-    }, 600);
+    setIsSubmitting(true);
+    const email = formData.email || (formData.fullName ? `${formData.fullName.toLowerCase().replace(/\s+/g, ".")}@example.com` : "aditya@example.com");
+    await loginWithGoogle(
+      email,
+      formData.fullName || "Aditya Nanda",
+      formData.role || "Executive",
+      formData.age ? parseInt(formData.age, 10) : 24,
+      formData.workingHours
+    );
   };
 
   return (
@@ -88,6 +92,25 @@ export default function SignUpPage() {
               />
             </div>
 
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-xs font-semibold text-[#444746] uppercase tracking-wider mb-1.5"
+              >
+                Email Address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="e.g. aditya@example.com"
+                className="w-full rounded-xl border border-[#e0e3e7] bg-[#f8fafd] px-4 py-2.5 text-sm text-[#1f1f1f] placeholder:text-[#747775] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] focus:bg-white transition-all"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label
@@ -124,7 +147,7 @@ export default function SignUpPage() {
                   required
                   value={formData.role}
                   onChange={handleChange}
-                  placeholder="e.g. Founder"
+                  placeholder="e.g. Lead Architect"
                   className="w-full rounded-xl border border-[#e0e3e7] bg-[#f8fafd] px-4 py-2.5 text-sm text-[#1f1f1f] placeholder:text-[#747775] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] focus:bg-white transition-all"
                 />
               </div>
@@ -159,10 +182,10 @@ export default function SignUpPage() {
             {/* Google Sign Up Button */}
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full rounded-full border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] px-6 py-3 font-medium text-sm text-[#1f1f1f] flex items-center justify-center gap-3 transition-all duration-150 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+              disabled={isLoading || isSubmitting}
+              className="w-full rounded-full border border-[#e0e3e7] bg-white hover:bg-[#f0f4f9] active:bg-[#e4ebf5] px-6 py-3 font-medium text-sm text-[#1f1f1f] flex items-center justify-center gap-3 transition-all duration-150 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed mt-3"
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <Loader2 className="w-5 h-5 animate-spin text-[#0b57d0]" />
               ) : (
                 <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
@@ -184,7 +207,7 @@ export default function SignUpPage() {
                   />
                 </svg>
               )}
-              <span>Sign up with Google</span>
+              <span>Complete Setup with Google</span>
             </button>
           </form>
 

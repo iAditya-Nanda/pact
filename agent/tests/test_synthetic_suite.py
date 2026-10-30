@@ -106,6 +106,16 @@ def test_synthetic_hitl_approval_and_cryptographic_sealing():
         decision=ApprovalStatus.APPROVED,
         payload_hash=pending["payload_hash"],
     )
+    # If the plan contained multiple consequential steps, approve subsequent steps
+    while resume_res.get("status") == "SUSPENDED_APPROVAL":
+        next_pending = resume_res.get("pending_approval")
+        if not next_pending:
+            break
+        resume_res = orchestrator.approve_and_resume(
+            run_id=run_id,
+            decision=ApprovalStatus.APPROVED,
+            payload_hash=next_pending["payload_hash"],
+        )
     assert resume_res["status"] in ["COMPLETED", "EXECUTING"]
     assert len(resume_res.get("execution_history", [])) >= 1
 

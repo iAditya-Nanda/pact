@@ -93,7 +93,7 @@ flowchart TD
 
 - **Frontend:** Next.js (App Router), React, Tailwind CSS, Radix UI
 - **Backend & Agent Engine:** TypeScript / Node.js, LangGraph State Machine
-- **State & Persistence:** SQLite / PostgreSQL, Prisma ORM
+- **State & Persistence:** Supabase (Local Docker instance, PostgreSQL, Realtime subscriptions, pgvector)
 - **Protocol:** Server-Sent Events (SSE) for streaming audit logs and real-time approval requests
 
 ---
@@ -117,14 +117,14 @@ flowchart TD
    npm install
    ```
 
-3. Set up environment variables:
+3. Start the local Supabase stack:
    ```bash
-   cp .env.example .env
+   supabase start
    ```
 
-4. Initialize the database schema:
+4. Set up environment variables:
    ```bash
-   npx prisma db push
+   cp .env.example .env.local
    ```
 
 5. Run the development server:
@@ -152,7 +152,7 @@ pact/
 │   │   ├── calendar/        # Calendar connector (fetch, schedule, cancel)
 │   │   └── tasks/           # Task connector (create, complete, update)
 │   └── lib/                 # Database client, telemetry, and utilities
-├── prisma/                  # Database schema and seed fixtures
+├── supabase/               # Database migrations, seed data, and local config
 ├── tests/                   # Integration and idempotency test suites
 └── README.md
 ```

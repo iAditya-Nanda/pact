@@ -115,14 +115,16 @@ export default function DashboardPage() {
     }
   }, [mounted, isLoading, activeUser, router]);
 
-  // Dynamic user data
-  const displayName = activeUser?.fullName || "Aditya Nanda";
-  const displayEmail = activeUser?.email || "adityananda.dev@gmail.com";
-  const displayAvatar = activeUser?.avatarUrl || "";
-  const displayRole = activeUser?.role || "Founder";
-  const displayAge = activeUser?.age || 21;
+  // Dynamic user data (SSR safe with mounted guard to eliminate hydration mismatch)
+  const displayName = mounted && activeUser?.fullName ? activeUser.fullName : "Aditya Nanda";
+  const displayEmail = mounted && activeUser?.email ? activeUser.email : "adityananda.dev@gmail.com";
+  const displayAvatar = mounted && activeUser?.avatarUrl ? activeUser.avatarUrl : "";
+  const displayRole = mounted && activeUser?.role ? activeUser.role : "Lead Architect";
+  const displayAge = mounted && activeUser?.age ? activeUser.age : 24;
   const displayPreference =
-    activeUser?.schedulePreference || "Avoid meetings before 10:00 AM";
+    mounted && activeUser?.schedulePreference
+      ? activeUser.schedulePreference
+      : "Avoid meetings before 10:00 AM";
 
   // Initials for avatar fallback
   const initials = displayName

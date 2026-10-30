@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
+import Script from "next/script";
 import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
@@ -22,21 +23,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${outfit.variable} h-full antialiased`}>
       <head>
-        <script
+        <Script
+          id="pact-theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `(function() {
-              try {
-                var theme = localStorage.getItem('pact_theme');
-                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (theme === 'dark' || (!theme && prefersDark)) {
-                  document.documentElement.classList.add('dark');
-                  document.body && document.body.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                  document.body && document.body.classList.remove('dark');
-                }
-              } catch (e) {}
-            })()`,
+            __html: `try {
+              var theme = localStorage.getItem('pact_theme');
+              var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              if (theme === 'dark' || (!theme && prefersDark)) {
+                document.documentElement.classList.add('dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+              }
+            } catch (e) {}`,
           }}
         />
       </head>

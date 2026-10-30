@@ -34,12 +34,18 @@ The PACT interface adopts the modern **Material Design 3 (Material You / M3 Ente
 | **Critical / Consequential** | `#ba1a1a` | `text-[#ba1a1a]`, `bg-[#ffdad6]` | Destructive actions, meeting cancellations, execution errors |
 
 ### 2.3 Typography & Text Colors
-| Role | HEX Code | Tailwind Class | Hierarchy |
+
+* **Primary Typeface:** **Outfit** (Google Font: `var(--font-outfit)`, fallbacks: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`)
+* **Design Characteristic:** A clean, modern geometric sans-serif that balances high-readability UI data density with an elegant enterprise aesthetic.
+
+| Role | HEX Code | Typography Spec | Hierarchy |
 | :--- | :--- | :--- | :--- |
-| **Headings (Display)** | `#1f1f1f` | `text-[#1f1f1f] font-semibold text-2xl` | Dashboard titles ("Here's the latest for...") |
-| **Body Primary** | `#1f1f1f` | `text-[#1f1f1f] text-sm` | Card titles, action labels, email bodies |
-| **Body Secondary** | `#444746` | `text-[#444746] text-xs font-normal` | Subtitles, timestamps, metadata labels |
-| **Muted Metric Labels** | `#747775` | `text-[#747775] text-xs font-medium` | Stat headers with dotted underline |
+| **Headings (Display)** | `#1f1f1f` | `font-outfit font-semibold text-2xl` | Dashboard titles ("Here's the latest for...") |
+| **Card / Section Titles** | `#1f1f1f` | `font-outfit font-semibold text-lg` | Card headers, modal headings |
+| **Body Primary** | `#1f1f1f` | `font-outfit font-normal text-sm` | Action labels, email snippets, chat text |
+| **Body Secondary** | `#444746` | `font-outfit font-normal text-xs` | Subtitles, timestamps, metadata labels |
+| **Metric Values** | `#1f1f1f` | `font-outfit font-medium text-3xl` | Big numerical figures (`167`, `4 Unread`) |
+| **Muted Metric Labels** | `#747775` | `font-outfit font-medium text-xs` | Stat headers with dotted interactive underline |
 
 ---
 

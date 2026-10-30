@@ -113,6 +113,7 @@ export interface WorkspaceData {
   calendarEvents: WorkspaceCalendarEvent[];
   tasks: WorkspaceTask[];
   pendingActions: WorkspaceAction[];
+  isLiveGoogleData?: boolean;
 }
 
 const DATA_DIR = path.join(process.cwd(), ".data");

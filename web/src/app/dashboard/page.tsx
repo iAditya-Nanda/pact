@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Modal } from "@/components/ui/Modal";
+import { WorkspaceWindow, WorkspaceChatPanel } from "@/components/workspace-window";
+import { WorkspaceData } from "@/lib/workspace-service";
 import {
   LogOut,
   ShieldCheck,
@@ -32,6 +34,10 @@ export default function DashboardPage() {
 
   // Theme state (Dark/Light mode support)
   const [isDark, setIsDark] = useState(false);
+
+  // Active in-app macOS workspace window ("gmail" | "calendar" | "tasks" | null)
+  const [activeAppWindow, setActiveAppWindow] = useState<"gmail" | "calendar" | "tasks" | null>(null);
+  const [isWindowMaximized, setIsWindowMaximized] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -322,20 +328,152 @@ export default function DashboardPage() {
     }
   };
 
+  // Fallback workspace data when live data is initializing
+  const defaultWorkspace: WorkspaceData = {
+    user: {
+      id: user?.id || "usr_aditya",
+      email: user?.email || "adityananda.dev@gmail.com",
+      fullName: displayName,
+      avatarUrl: displayAvatar || "",
+      role: displayRole,
+      age: displayAge,
+      schedulePreference: "strict_focus_blocks",
+    },
+    metrics: {
+      unreadEmails: 1,
+      emailsThisMonth: 96,
+      emailsImportant: 1,
+      meetingsToday: 1,
+      thisWeekHours: "14h",
+      conflicts: 0,
+      activeTasks: 4,
+      dueToday: 1,
+      overdue: 0,
+    },
+    latestEmail: {
+      id: "msg_live_1",
+      sender: "Renee from Cline",
+      subject: "Join our next Hackathon: Built with Kimi K3.1 & Moonshot AI",
+      receivedAt: "Today, 2:15 PM",
+      priority: "urgent",
+    },
+    nextMeeting: {
+      id: "evt_1",
+      title: "Project Sync",
+      time: "Today, 4:00 PM - 4:30 PM",
+      location: "Google Meet",
+      conflictDetected: false,
+    },
+    topAction: {
+      id: "tsk_1",
+      title: "Finalize System Architecture",
+      description: "Submit RFC by EOD",
+      priority: "urgent",
+    },
+    aiRecommendation: {
+      id: "rec_1",
+      title: "AI Recommended Action",
+      message: "Reschedule Client Debrief to 3:30 PM to honor your protected focus block rule.",
+      status: "Ready",
+      targetService: "calendar",
+      idempotencyKey: "rec_1_key",
+    },
+    settings: {
+      mobileNotify: false,
+      aiMode: "safe",
+    },
+    connectedApps: [
+      { id: "gmail", name: "Gmail", connected: true, status: "live", icon: "/icons/gmail.png" },
+      { id: "calendar", name: "Calendar", connected: true, status: "live", icon: "/icons/calendar.png" },
+      { id: "tasks", name: "Tasks", connected: true, status: "live", icon: "/icons/tasks.svg" },
+    ],
+    emails: [
+      {
+        id: "msg_live_1",
+        sender: "Renee from Cline",
+        senderEmail: "renee@cline.bot",
+        subject: "Join our next Hackathon: Built with Kimi K3.1 & Moonshot AI",
+        snippet: "Hey Aditya, we are thrilled to invite you to our upcoming hackathon building next-gen autonomous agent architectures...",
+        receivedAt: "Today, 2:15 PM",
+        priority: "urgent",
+        status: "unread",
+        thisMonth: true,
+      },
+      {
+        id: "msg_2",
+        sender: "Google Cloud Platform",
+        senderEmail: "google-cloud-noreply@google.com",
+        subject: "Project pact-18: OAuth consent and API quotas updated",
+        snippet: "Your Google Cloud Project pact-18 (651148810116) has updated API quota configurations for Gmail and Calendar.",
+        receivedAt: "Yesterday, 6:40 PM",
+        priority: "normal",
+        status: "read",
+        thisMonth: true,
+      },
+    ],
+    calendarEvents: [
+      {
+        id: "cal_1",
+        title: "Client Technical Debrief",
+        description: "Review PACT autonomous orchestration architecture with client executive team.",
+        startTime: "Today, 3:00 PM",
+        endTime: "Today, 4:00 PM",
+        location: "Google Meet (meet.google.com/xyz-pact-acc)",
+        status: "confirmed",
+        conflictDetected: true,
+        isToday: true,
+        hours: 1,
+      },
+      {
+        id: "cal_2",
+        title: "Google AI Hackathon Sync",
+        description: "Finalize deployment and submission artifacts.",
+        startTime: "Today, 5:30 PM",
+        endTime: "Today, 6:30 PM",
+        location: "Google Meet",
+        status: "confirmed",
+        conflictDetected: false,
+        isToday: true,
+        hours: 1,
+      },
+    ],
+    tasks: [
+      {
+        id: "tsk_1",
+        title: "Review Google Cloud API Quotas & Verification",
+        description: "Ensure Gmail and Calendar APIs remain within free-tier threshold.",
+        dueDate: "Today, 5:00 PM",
+        priority: "urgent",
+        status: "pending",
+        isDueToday: true,
+        isOverdue: false,
+      },
+      {
+        id: "tsk_2",
+        title: "Connect Firebase Auth live token refresh",
+        description: "Test offline access token re-authentication pipeline.",
+        dueDate: "Tomorrow, 12:00 PM",
+        priority: "high",
+        status: "pending",
+        isDueToday: false,
+        isOverdue: false,
+      },
+    ],
+    pendingActions: [],
+    isLiveGoogleData: false,
+  };
+
   // Connected chat execution via /api/chat
-  const handleSendChat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || chatLoading) return;
-    const userMsg = chatInput;
-    setChatInput("");
-    setChatMessages((prev) => [...prev, { sender: "user", text: userMsg }]);
+  const executeChatCommand = async (msg: string) => {
+    if (!msg.trim() || chatLoading) return;
+    setChatMessages((prev) => [...prev, { sender: "user", text: msg }]);
     setChatLoading(true);
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg, mode: aiMode }),
+        body: JSON.stringify({ message: msg, mode: aiMode, activeApp: activeAppWindow }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -343,7 +481,7 @@ export default function DashboardPage() {
           ...prev,
           {
             sender: "ai",
-            text: data.reply || `Processed "${userMsg}" with guarded clearance.`,
+            text: data.reply || `Processed "${msg}" with guarded clearance.`,
           },
         ]);
         if (data.workspace) {
@@ -354,7 +492,7 @@ export default function DashboardPage() {
           ...prev,
           {
             sender: "ai",
-            text: `PACT Chief of Staff: Synchronized instruction "${userMsg}" with workspace engine.`,
+            text: `PACT Chief of Staff: Synchronized instruction "${msg}" with workspace engine.`,
           },
         ]);
       }
@@ -363,12 +501,20 @@ export default function DashboardPage() {
         ...prev,
         {
           sender: "ai",
-          text: `PACT Chief of Staff: Executed "${userMsg}". All services are up to date.`,
+          text: `PACT Chief of Staff: Executed "${msg}". All services are up to date.`,
         },
       ]);
     } finally {
       setChatLoading(false);
     }
+  };
+
+  const handleSendChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg = chatInput;
+    setChatInput("");
+    await executeChatCommand(userMsg);
   };
 
   // Quick Action Toggles & Chat State
@@ -509,8 +655,69 @@ export default function DashboardPage() {
 
       {/* 2. Main Content Canvas */}
       <main className="flex-1 flex flex-col justify-between px-4 lg:px-6 py-3.5 lg:py-4 gap-3 lg:gap-3.5 overflow-y-auto lg:overflow-hidden">
-        {/* Upper Main Row: 60% Width for 3 Cards + 40% Width for Executive Panel */}
-        <div className="flex flex-col lg:flex-row gap-3.5 lg:gap-4 items-stretch flex-1 min-h-0">
+        {activeAppWindow ? (
+          /* Split View: In-App macOS Workspace Window (Left) + AI Chat Panel (Right) */
+          <div className="flex-1 flex flex-col lg:flex-row gap-3.5 lg:gap-4 h-full min-h-0 overflow-hidden">
+            {/* Left: macOS Workspace Window (expands to 100% if isWindowMaximized, else 68%) */}
+            <div
+              className={`h-full transition-all duration-300 min-h-0 ${
+                isWindowMaximized ? "w-full" : "w-full lg:w-[68%]"
+              }`}
+            >
+              <WorkspaceWindow
+                activeTab={activeAppWindow}
+                onChangeTab={(tab) => setActiveAppWindow(tab)}
+                onClose={() => {
+                  setActiveAppWindow(null);
+                  setIsWindowMaximized(false);
+                }}
+                onMinimize={() => {
+                  setActiveAppWindow(null);
+                  setIsWindowMaximized(false);
+                }}
+                isMaximized={isWindowMaximized}
+                onToggleMaximize={() => setIsWindowMaximized(!isWindowMaximized)}
+                workspace={workspace || defaultWorkspace}
+                userEmail={user?.email || "adityananda.dev@gmail.com"}
+                onRefreshWorkspace={refreshWorkspace}
+                isRefreshing={false}
+                onAskAiAboutEmail={(email) => {
+                  executeChatCommand(
+                    `Analyze email from ${email.sender} regarding "${email.subject}" and prepare an executive summary.`
+                  );
+                }}
+                onResolveCalendarConflict={(event) => {
+                  executeChatCommand(
+                    `Propose a conflict-free resolution for meeting "${event.title}" on ${event.startTime}.`
+                  );
+                }}
+                onAddTask={(task) => {
+                  executeChatCommand(
+                    `Schedule priority task "${task.title}" with Chief of Staff clearance.`
+                  );
+                }}
+              />
+            </div>
+
+            {/* Right: AI Co-Pilot Panel (hidden if isWindowMaximized, else 32%) */}
+            {!isWindowMaximized && (
+              <div className="w-full lg:w-[32%] h-full min-h-0 flex flex-col">
+                <WorkspaceChatPanel
+                  activeApp={activeAppWindow}
+                  userFullName={displayName}
+                  aiMode={aiMode}
+                  onSelectAiMode={handleSelectAiMode}
+                  onSendMessage={executeChatCommand}
+                  messages={chatMessages}
+                  isLoading={chatLoading}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Upper Main Row: 60% Width for 3 Cards + 40% Width for Executive Panel */}
+            <div className="flex flex-col lg:flex-row gap-3.5 lg:gap-4 items-stretch flex-1 min-h-0">
           {/* 3 Cards Container (Constrained to 60% Width as Requested) */}
           <div className="w-full lg:w-[60%] grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-3.5 min-h-0">
             {/* Column 1: Gmail Insights & Info */}
@@ -595,15 +802,13 @@ export default function DashboardPage() {
 
               {/* Bottom Button */}
               {workspace?.isLiveGoogleData ? (
-                <a
-                  href="https://mail.google.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => setActiveAppWindow("gmail")}
                   className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
                 >
                   <span>Open Gmail</span>
                   <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
-                </a>
+                </button>
               ) : (
                 <button
                   onClick={handleConnectGoogleServices}
@@ -698,15 +903,13 @@ export default function DashboardPage() {
 
               {/* Bottom Button */}
               {workspace?.isLiveGoogleData ? (
-                <a
-                  href="https://calendar.google.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => setActiveAppWindow("calendar")}
                   className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
                 >
                   <span>Open Calendar</span>
                   <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
-                </a>
+                </button>
               ) : (
                 <button
                   onClick={handleConnectGoogleServices}
@@ -801,15 +1004,13 @@ export default function DashboardPage() {
 
               {/* Bottom Button */}
               {workspace?.isLiveGoogleData ? (
-                <a
-                  href="https://tasks.google.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => setActiveAppWindow("tasks")}
                   className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
                 >
                   <span>Open Tasks</span>
                   <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
-                </a>
+                </button>
               ) : (
                 <button
                   onClick={handleConnectGoogleServices}
@@ -1011,9 +1212,9 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               {/* Gmail Icon */}
               <div
-                onClick={() => setIsConnectModalOpen(true)}
+                onClick={() => setActiveAppWindow("gmail")}
                 className="relative group cursor-pointer"
-                title={workspace?.isLiveGoogleData ? "Gmail: Live & Synchronized" : "Gmail: Click to Authorize"}
+                title="Open Gmail In-App Window"
               >
                 <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
                   <img
@@ -1031,9 +1232,9 @@ export default function DashboardPage() {
 
               {/* Calendar Icon */}
               <div
-                onClick={() => setIsConnectModalOpen(true)}
+                onClick={() => setActiveAppWindow("calendar")}
                 className="relative group cursor-pointer"
-                title={workspace?.isLiveGoogleData ? "Google Calendar: Live & Synchronized" : "Google Calendar: Click to Authorize"}
+                title="Open Calendar In-App Window"
               >
                 <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
                   <img
@@ -1051,9 +1252,9 @@ export default function DashboardPage() {
 
               {/* Tasks Icon */}
               <div
-                onClick={() => setIsConnectModalOpen(true)}
+                onClick={() => setActiveAppWindow("tasks")}
                 className="relative group cursor-pointer"
-                title={workspace?.isLiveGoogleData ? "Google Tasks: Live & Synchronized" : "Google Tasks: Click to Authorize"}
+                title="Open Tasks In-App Window"
               >
                 <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
                   <img
@@ -1190,7 +1391,9 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
-      </main>
+      </>
+    )}
+  </main>
 
 
 

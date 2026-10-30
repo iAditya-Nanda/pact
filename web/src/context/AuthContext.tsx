@@ -48,13 +48,13 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
 });
 
-// Non-blocking Firestore background sync with timeout protection
+// Non-blocking Firestore background sync with silent fallback protection
 async function safeFirestoreSync(userId: string, data: Partial<UserProfile>) {
   try {
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Firestore sync timeout")), 2000)
+    const timeout = new Promise<string>((resolve) =>
+      setTimeout(() => resolve("timeout"), 1500)
     );
-    const syncOp = async () => {
+    const syncOp = async (): Promise<string> => {
       const userDocRef = doc(db, "users", userId);
       await setDoc(
         userDocRef,
@@ -70,11 +70,11 @@ async function safeFirestoreSync(userId: string, data: Partial<UserProfile>) {
         },
         { merge: true }
       );
+      return "synced";
     };
     await Promise.race([syncOp(), timeout]);
-  } catch (e) {
-    // Non-fatal: session is fully saved in localStorage and Firebase Auth
-    console.warn("Background Firestore sync skipped or timed out:", e);
+  } catch {
+    // Non-fatal: session is persistently maintained in localStorage & server database
   }
 }
 

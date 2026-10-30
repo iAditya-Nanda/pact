@@ -25,18 +25,8 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
-  // Local session cache for instantaneous retrieval
-  const [localCache, setLocalCache] = useState<any>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("pact_auth_user");
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {}
-      }
-    }
-    return null;
-  });
+  // Local session cache for instantaneous client retrieval post-hydration
+  const [localCache, setLocalCache] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -376,49 +366,49 @@ export default function DashboardPage() {
 
           {/* Right Executive Panel & Quick Actions (40% Width) */}
           <div className="w-full lg:w-[40%] flex flex-col justify-between gap-3 lg:gap-3.5 min-h-0">
-            {/* User Profile Card + Dynamic Greeting + IST Timer */}
-            <div className="border border-[#d3e3fd] rounded-2xl bg-gradient-to-br from-[#ffffff] via-[#f8fafd] to-[#eef4fc] p-4.5 lg:p-5 shadow-xs">
+            {/* User Profile Card + Dynamic Greeting + IST Timer (Clean white, 120px avatar) */}
+            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4 shadow-xs">
               <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-5">
-                {/* 200px Google Avatar Circle */}
+                {/* 120px Google Avatar Circle */}
                 <div className="relative shrink-0">
-                  {displayAvatar ? (
+                  {mounted && displayAvatar ? (
                     <img
                       src={displayAvatar}
                       alt={displayName}
                       referrerPolicy="no-referrer"
-                      className="w-36 h-36 sm:w-44 sm:h-44 lg:w-[200px] lg:h-[200px] rounded-full object-cover border-4 border-white shadow-md"
+                      className="w-[120px] h-[120px] min-w-[120px] min-h-[120px] rounded-full object-cover border-2 border-[#e0e3e7] shadow-xs"
                     />
                   ) : (
-                    <div className="w-36 h-36 sm:w-44 sm:h-44 lg:w-[200px] lg:h-[200px] rounded-full bg-[#0b57d0] text-white flex items-center justify-center text-4xl font-extrabold border-4 border-white shadow-md">
+                    <div className="w-[120px] h-[120px] min-w-[120px] min-h-[120px] rounded-full bg-[#0b57d0] text-white flex items-center justify-center text-3xl font-extrabold border-2 border-[#e0e3e7] shadow-xs">
                       {initials || "AN"}
                     </div>
                   )}
                   <div
-                    className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-[#34A853] border-2 border-white flex items-center justify-center text-white shadow-xs"
+                    className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#34A853] border-2 border-white flex items-center justify-center text-white shadow-xs"
                     title="Google Verified Account"
                   >
-                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <ShieldCheck className="w-3 h-3" />
                   </div>
                 </div>
 
                 {/* User Info & Greetings */}
                 <div className="min-w-0 flex-1 flex flex-col justify-center text-center sm:text-left">
                   {/* Big Dynamic Greeting */}
-                  <div className="text-lg lg:text-xl font-bold text-[#747775] leading-tight">
+                  <div className="text-base lg:text-lg font-bold text-[#747775] leading-tight">
                     {greeting},
                   </div>
 
                   {/* Big Name */}
-                  <div className="text-2xl lg:text-3xl font-black text-[#1f1f1f] tracking-tight leading-tight mt-0.5 truncate">
+                  <div className="text-xl lg:text-2xl font-black text-[#1f1f1f] tracking-tight leading-tight mt-0.5 truncate">
                     {displayName}
                   </div>
 
                   {/* Small Role & Age */}
-                  <div className="flex items-center justify-center sm:justify-start gap-2 mt-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#d3e3fd]/70 border border-[#d3e3fd] text-xs font-bold text-[#0b57d0]">
+                  <div className="flex items-center justify-center sm:justify-start gap-2 mt-1.5">
+                    <span className="px-2 py-0.5 rounded-full bg-[#f0f4f9] border border-[#e0e3e7] text-xs font-bold text-[#0b57d0]">
                       {displayRole}
                     </span>
-                    <span className="text-xs font-semibold text-[#444746]">
+                    <span className="text-xs font-medium text-[#444746]">
                       Age {displayAge}
                     </span>
                   </div>
@@ -429,21 +419,21 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Live IST Timer with Seconds */}
-                  <div className="mt-3 flex items-center justify-center sm:justify-start">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 border border-[#d3e3fd] font-mono text-xs font-bold text-[#1f1f1f] shadow-2xs">
-                      <Clock className="w-3.5 h-3.5 text-[#0b57d0]" />
-                      <span>{istTime || "Loading IST..."}</span>
+                  <div className="mt-2.5 flex items-center justify-center sm:justify-start">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#f0f4f9] border border-[#e0e3e7] font-mono text-2xs font-bold text-[#1f1f1f]">
+                      <Clock className="w-3 h-3 text-[#0b57d0]" />
+                      <span>{mounted && istTime ? istTime : "IST Active"}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions & AI Recommendations Card */}
-            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-4.5 shadow-xs flex-1 flex flex-col justify-between">
+            {/* Quick Actions & AI Recommendations Card (Compact & Balanced) */}
+            <div className="border border-[#e0e3e7] rounded-2xl bg-white p-3.5 shadow-xs flex-1 flex flex-col justify-between">
               {/* Top: AI Recommendation Header & Body */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f]">
                     <Sparkles className="w-3.5 h-3.5 text-[#0b57d0]" />
                     <span>AI Recommended Action</span>
@@ -453,21 +443,24 @@ export default function DashboardPage() {
                   </span>
                 </div>
 
-                <div className="text-xs text-[#444746] leading-relaxed bg-[#f8fafd] p-2.5 rounded-xl border border-[#e0e3e7]/80">
+                <div className="text-xs text-[#444746] leading-relaxed bg-[#f8fafd] p-2 rounded-xl border border-[#e0e3e7]/80">
                   Reschedule Client Debrief to 3:30 PM to honor your protected focus block rule.
                 </div>
               </div>
 
-              {/* Middle: Call on Mobile (Voice Escalation) Toggle with Upside Explanation */}
-              <div className="pt-3 border-t border-[#e0e3e7]/80">
-                <div className="flex items-start justify-between gap-3">
+              {/* Middle: Call on Mobile (Voice Escalation) Toggle */}
+              <div className="pt-2 border-t border-[#e0e3e7]/80">
+                <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f]">
                       <PhoneCall className="w-3.5 h-3.5 text-[#0b57d0]" />
-                      <span>Call on Mobile (Voice Escalation)</span>
+                      <span>Call on Mobile</span>
+                      <span className="text-3xs font-normal text-[#747775]">
+                        ({mobileNotify ? "Active" : "In-App Only"})
+                      </span>
                     </div>
-                    <p className="text-3xs text-[#747775] mt-1 leading-normal">
-                      When enabled, PACT initiates an urgent phone call to your mobile if high-priority scheduling conflicts require real-time clearance.
+                    <p className="text-3xs text-[#747775] truncate mt-0.5">
+                      Voice call escalation for urgent schedule conflicts &amp; clearances.
                     </p>
                   </div>
 
@@ -477,69 +470,61 @@ export default function DashboardPage() {
                     role="switch"
                     aria-checked={mobileNotify}
                     onClick={() => setMobileNotify(!mobileNotify)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                       mobileNotify ? "bg-[#1e8e3e]" : "bg-[#c4c7c5]"
                     }`}
                     title="Toggle Call on Mobile"
                   >
                     <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                        mobileNotify ? "translate-x-5" : "translate-x-0"
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                        mobileNotify ? "translate-x-4" : "translate-x-0"
                       }`}
                     />
                   </button>
                 </div>
-                <div className="mt-1 text-3xs font-semibold">
-                  {mobileNotify ? (
-                    <span className="text-[#1e8e3e]">Active • Calls enabled for urgent conflicts</span>
-                  ) : (
-                    <span className="text-[#747775]">Disabled • In-app notifications only</span>
-                  )}
-                </div>
               </div>
 
-              {/* Bottom: Execution Autonomy Mode with Upside Explanations */}
-              <div className="pt-3 border-t border-[#e0e3e7]/80">
-                <div className="mb-2">
+              {/* Bottom: Execution Autonomy Mode */}
+              <div className="pt-2 border-t border-[#e0e3e7]/80">
+                <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f]">
                     <Zap className="w-3.5 h-3.5 text-[#0b57d0]" />
-                    <span>Execution Autonomy Mode</span>
+                    <span>Autonomy Mode</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 mt-1.5">
-                    <div className="text-3xs text-[#747775] leading-snug bg-[#f8fafd] p-2 rounded-lg border border-[#e0e3e7]/60">
-                      <span className="font-bold text-[#1f1f1f] block">Safe Mode</span>
-                      Requires explicit human clearance before executing emails, calendar events, or tasks.
-                    </div>
-                    <div className="text-3xs text-[#747775] leading-snug bg-[#f8fafd] p-2 rounded-lg border border-[#e0e3e7]/60">
-                      <span className="font-bold text-[#1f1f1f] block">Turbo Mode</span>
-                      Autonomously executes high-confidence routine actions with full access and writes audit logs.
-                    </div>
-                  </div>
+                  <span className="text-3xs text-[#747775]">
+                    {aiMode === "safe" ? "Guarded execution" : "Autonomous execution"}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setAiMode("safe")}
-                    className={`py-2 px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    className={`py-1.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer ${
                       aiMode === "safe"
                         ? "bg-[#e8f0fe] border-[#0b57d0] text-[#0b57d0] shadow-2xs"
-                        : "bg-white border-[#e0e3e7] text-[#444746] hover:bg-[#f8fafd]"
+                        : "bg-[#f8fafd] border-[#e0e3e7] text-[#444746] hover:bg-[#f0f4f9]"
                     }`}
                   >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>Safe (Clearance)</span>
+                    <div className="flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>Safe Mode</span>
+                    </div>
+                    <span className="text-3xs font-normal opacity-80">Clearance required</span>
                   </button>
 
                   <button
                     onClick={() => setAiMode("turbo")}
-                    className={`py-2 px-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    className={`py-1.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer ${
                       aiMode === "turbo"
                         ? "bg-[#fff3e0] border-[#e65100] text-[#e65100] shadow-2xs"
-                        : "bg-white border-[#e0e3e7] text-[#444746] hover:bg-[#f8fafd]"
+                        : "bg-[#f8fafd] border-[#e0e3e7] text-[#444746] hover:bg-[#f0f4f9]"
                     }`}
                   >
-                    <Zap className="w-3.5 h-3.5" />
-                    <span>Turbo (Full Access)</span>
+                    <div className="flex items-center gap-1">
+                      <Zap className="w-3 h-3" />
+                      <span>Turbo Mode</span>
+                    </div>
+                    <span className="text-3xs font-normal opacity-80">Full autonomy</span>
                   </button>
                 </div>
               </div>

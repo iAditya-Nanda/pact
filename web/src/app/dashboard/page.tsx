@@ -43,11 +43,12 @@ export default function DashboardPage() {
       }
       const savedTheme = localStorage.getItem("pact_theme");
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const shouldBeDark = savedTheme === "dark" || (!savedTheme && prefersDark);
+      const shouldBeDark = savedTheme ? savedTheme === "dark" : prefersDark;
       setIsDark(shouldBeDark);
       document.documentElement.classList.toggle("dark", shouldBeDark);
+      document.body.classList.toggle("dark", shouldBeDark);
     }
-  }, [user]);
+  }, []);
 
   const handleToggleTheme = () => {
     const nextDark = !isDark;
@@ -55,6 +56,7 @@ export default function DashboardPage() {
     if (typeof window !== "undefined") {
       localStorage.setItem("pact_theme", nextDark ? "dark" : "light");
       document.documentElement.classList.toggle("dark", nextDark);
+      document.body.classList.toggle("dark", nextDark);
     }
   };
 
@@ -160,7 +162,11 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="h-screen max-h-screen flex flex-col justify-between overflow-hidden bg-[#f8fafd] dark:bg-[#111318] select-none text-[#1f1f1f] dark:text-[#e2e2e6] transition-colors">
+    <div
+      className={`h-screen max-h-screen flex flex-col justify-between overflow-hidden ${
+        isDark ? "dark bg-[#111318] text-[#e2e2e6]" : "bg-[#f8fafd] text-[#1f1f1f]"
+      } select-none transition-colors`}
+    >
       {/* 1. Header (Clean & Minimal with P.A.C.T. and Big Sign Out Icon) */}
       <header className="h-16 border-b border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] px-4 lg:px-6 flex items-center justify-between shrink-0 transition-colors">
         {/* Left Branding */}
@@ -226,21 +232,21 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* All 3 (This Month, Important, Latest) in 1 Line with Latest taking the space */}
-                <div className="flex items-stretch gap-1.5 pt-1">
-                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-2 py-1.5 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] text-center shrink-0">
-                    <div className="text-xs font-bold text-[#1f1f1f] dark:text-white leading-tight">342</div>
-                    <div className="text-3xs text-[#747775] dark:text-[#8e9099] whitespace-nowrap mt-0.5">This month</div>
+                {/* 3 Metric Cards Vertically Stacked */}
+                <div className="flex flex-col gap-2 pt-1">
+                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
+                    <span className="text-xs text-[#747775] dark:text-[#8e9099]">This month</span>
+                    <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">342</span>
                   </div>
-                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-2 py-1.5 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] text-center shrink-0">
-                    <div className="text-xs font-bold text-[#1f1f1f] dark:text-white leading-tight">4</div>
-                    <div className="text-3xs text-[#747775] dark:text-[#8e9099] whitespace-nowrap mt-0.5">Important</div>
+                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
+                    <span className="text-xs text-[#747775] dark:text-[#8e9099]">Important</span>
+                    <span className="text-xs font-bold text-[#ba1a1a] dark:text-[#ff897d]">4</span>
                   </div>
-                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-2.5 py-1.5 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="text-3xs font-semibold text-[#444746] dark:text-[#e2e2e6] truncate">
+                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex flex-col justify-center">
+                    <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
                       Latest: Sarah Lin (VP Eng)
                     </div>
-                    <div className="text-3xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
+                    <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
                       Q4 Architecture Review Agenda
                     </div>
                   </div>
@@ -290,21 +296,21 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* All 3 (This Week, Conflicts, Next Meeting) in 1 Line with Next taking the space */}
-                <div className="flex items-stretch gap-1.5 pt-1">
-                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-2 py-1.5 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] text-center shrink-0">
-                    <div className="text-xs font-bold text-[#1f1f1f] dark:text-white leading-tight">18.5h</div>
-                    <div className="text-3xs text-[#747775] dark:text-[#8e9099] whitespace-nowrap mt-0.5">This week</div>
+                {/* 3 Metric Cards Vertically Stacked */}
+                <div className="flex flex-col gap-2 pt-1">
+                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
+                    <span className="text-xs text-[#747775] dark:text-[#8e9099]">This week</span>
+                    <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">18.5h</span>
                   </div>
-                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-2 py-1.5 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] text-center shrink-0">
-                    <div className="text-xs font-bold text-[#1f1f1f] dark:text-white leading-tight">0</div>
-                    <div className="text-3xs text-[#747775] dark:text-[#8e9099] whitespace-nowrap mt-0.5">Conflicts</div>
+                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
+                    <span className="text-xs text-[#747775] dark:text-[#8e9099]">Conflicts</span>
+                    <span className="text-xs font-bold text-[#1e8e3e] dark:text-[#81c995]">0 Protected</span>
                   </div>
-                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-2.5 py-1.5 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="text-3xs font-semibold text-[#444746] dark:text-[#e2e2e6] truncate">
+                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex flex-col justify-center">
+                    <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
                       Next: Executive Sync
                     </div>
-                    <div className="text-3xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
+                    <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
                       11:30 AM • Google Meet
                     </div>
                   </div>
@@ -354,21 +360,21 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* All 3 (Due Today, Overdue, Priority Action) in 1 Line with Priority taking the space */}
-                <div className="flex items-stretch gap-1.5 pt-1">
-                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-2 py-1.5 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] text-center shrink-0">
-                    <div className="text-xs font-bold text-[#1f1f1f] dark:text-white leading-tight">2</div>
-                    <div className="text-3xs text-[#747775] dark:text-[#8e9099] whitespace-nowrap mt-0.5">Due today</div>
+                {/* 3 Metric Cards Vertically Stacked */}
+                <div className="flex flex-col gap-2 pt-1">
+                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
+                    <span className="text-xs text-[#747775] dark:text-[#8e9099]">Due today</span>
+                    <span className="text-xs font-bold text-[#e65100] dark:text-[#ffb77d]">2 Urgent</span>
                   </div>
-                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-2 py-1.5 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] text-center shrink-0">
-                    <div className="text-xs font-bold text-[#1f1f1f] dark:text-white leading-tight">0</div>
-                    <div className="text-3xs text-[#747775] dark:text-[#8e9099] whitespace-nowrap mt-0.5">Overdue</div>
+                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex items-center justify-between">
+                    <span className="text-xs text-[#747775] dark:text-[#8e9099]">Overdue</span>
+                    <span className="text-xs font-bold text-[#1e8e3e] dark:text-[#81c995]">0 On track</span>
                   </div>
-                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-2.5 py-1.5 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="text-3xs font-semibold text-[#444746] dark:text-[#e2e2e6] truncate">
+                  <div className="bg-[#f8fafd] dark:bg-[#282a2f] px-3 py-2 rounded-xl border border-[#e0e3e7]/70 dark:border-[#34373d] flex flex-col justify-center">
+                    <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
                       Top Action: Security
                     </div>
-                    <div className="text-3xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
+                    <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
                       Token rotation protocol
                     </div>
                   </div>
@@ -400,15 +406,15 @@ export default function DashboardPage() {
                       src={displayAvatar}
                       alt={displayName}
                       referrerPolicy="no-referrer"
-                      className="w-[120px] h-[120px] min-w-[120px] min-h-[120px] rounded-full object-cover border-2 border-[#e0e3e7] shadow-xs"
+                      className="w-[120px] h-[120px] min-w-[120px] min-h-[120px] rounded-full object-cover border-2 border-[#e0e3e7] dark:border-[#34373d] shadow-xs"
                     />
                   ) : (
-                    <div className="w-[120px] h-[120px] min-w-[120px] min-h-[120px] rounded-full bg-[#0b57d0] text-white flex items-center justify-center text-3xl font-extrabold border-2 border-[#e0e3e7] shadow-xs">
+                    <div className="w-[120px] h-[120px] min-w-[120px] min-h-[120px] rounded-full bg-[#0b57d0] dark:bg-[#004a77] text-white dark:text-[#d3e3fd] flex items-center justify-center text-3xl font-extrabold border-2 border-[#e0e3e7] dark:border-[#34373d] shadow-xs">
                       {initials || "AN"}
                     </div>
                   )}
                   <div
-                    className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#34A853] border-2 border-white flex items-center justify-center text-white shadow-xs"
+                    className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#34A853] border-2 border-white dark:border-[#1d1f24] flex items-center justify-center text-white shadow-xs"
                     title="Google Verified Account"
                   >
                     <ShieldCheck className="w-3 h-3" />
@@ -419,33 +425,33 @@ export default function DashboardPage() {
                 <div className="min-w-0 flex-1 flex flex-col justify-center text-left">
                   {/* Dynamic Greeting & User Name in Same Line, Left-Aligned with Space After Comma */}
                   <div className="flex items-baseline gap-1.5 text-left truncate">
-                    <span className="text-base lg:text-lg font-bold text-[#747775] shrink-0">
+                    <span className="text-base lg:text-lg font-bold text-[#747775] dark:text-[#c4c6cf] shrink-0">
                       {greeting},
                     </span>
-                    <span className="text-xl lg:text-2xl font-black text-[#1f1f1f] tracking-tight truncate">
+                    <span className="text-xl lg:text-2xl font-black text-[#1f1f1f] dark:text-white tracking-tight truncate">
                       {displayName}
                     </span>
                   </div>
 
                   {/* Small Role & Age */}
                   <div className="flex items-center justify-start gap-2 mt-1.5 text-left">
-                    <span className="px-2 py-0.5 rounded-full bg-[#f0f4f9] border border-[#e0e3e7] text-xs font-bold text-[#0b57d0]">
+                    <span className="px-2 py-0.5 rounded-full bg-[#f0f4f9] dark:bg-[#004a77] border border-[#e0e3e7] dark:border-[#a8c7fa]/40 text-xs font-bold text-[#0b57d0] dark:text-[#a8c7fa]">
                       {displayRole}
                     </span>
-                    <span className="text-xs font-medium text-[#444746]">
+                    <span className="text-xs font-medium text-[#444746] dark:text-[#c4c6cf]">
                       Age {displayAge}
                     </span>
                   </div>
 
                   {/* Small Email */}
-                  <div className="text-xs text-[#747775] truncate mt-1 text-left">
+                  <div className="text-xs text-[#747775] dark:text-[#8e9099] truncate mt-1 text-left">
                     {displayEmail}
                   </div>
 
                   {/* Live IST Timer with Seconds */}
                   <div className="mt-2.5 flex items-center justify-start text-left">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#f0f4f9] border border-[#e0e3e7] font-mono text-2xs font-bold text-[#1f1f1f]">
-                      <Clock className="w-3 h-3 text-[#0b57d0]" />
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#f0f4f9] dark:bg-[#282a2f] border border-[#e0e3e7] dark:border-[#34373d] font-mono text-2xs font-bold text-[#1f1f1f] dark:text-[#e2e2e6]">
+                      <Clock className="w-3 h-3 text-[#0b57d0] dark:text-[#a8c7fa]" />
                       <span>{mounted && istTime ? istTime : "IST Active"}</span>
                     </div>
                   </div>

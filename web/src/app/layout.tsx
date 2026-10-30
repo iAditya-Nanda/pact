@@ -20,8 +20,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${outfit.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans bg-[#f8fafd] text-[#1f1f1f]">
+    <html lang="en" suppressHydrationWarning className={`${outfit.variable} h-full antialiased`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function() {
+              try {
+                var theme = localStorage.getItem('pact_theme');
+                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (theme === 'dark' || (!theme && prefersDark)) {
+                  document.documentElement.classList.add('dark');
+                  document.body && document.body.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                  document.body && document.body.classList.remove('dark');
+                }
+              } catch (e) {}
+            })()`,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col font-sans bg-[#f8fafd] dark:bg-[#111318] text-[#1f1f1f] dark:text-[#e2e2e6] transition-colors">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

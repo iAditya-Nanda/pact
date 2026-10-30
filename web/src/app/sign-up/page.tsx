@@ -6,13 +6,12 @@ import { useAuth } from "@/context/AuthContext";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 export default function SignUpPage() {
-  const { loginWithGoogle, isLoading } = useAuth();
+  const { saveOnboardingProfile, isLoading } = useAuth();
   const [formData, setFormData] = useState({
-    fullName: "Aditya Nanda",
-    age: "24",
-    role: "Lead Architect",
-    email: "adityananda.dev@gmail.com",
-    workingHours: "10:00 AM – 7:00 PM",
+    fullName: "",
+    age: "",
+    role: "",
+    workingHours: "Avoid meetings before 10:00 AM",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -25,17 +24,19 @@ export default function SignUpPage() {
     }));
   };
 
-  const handleGoogleSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const email = formData.email || "adityananda.dev@gmail.com";
-    await loginWithGoogle(
-      email,
-      formData.fullName || "Aditya Nanda",
-      formData.role || "Executive",
-      formData.age ? parseInt(formData.age, 10) : 24,
-      formData.workingHours
-    );
+    try {
+      await saveOnboardingProfile({
+        fullName: formData.fullName || "Aditya Nanda",
+        age: formData.age ? parseInt(formData.age, 10) : 24,
+        role: formData.role || "Lead Architect",
+        schedulePreference: formData.workingHours,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -68,17 +69,18 @@ export default function SignUpPage() {
           </h1>
 
           <p className="text-sm text-[#444746] leading-relaxed mb-6">
-            Calibrate your personal autonomous agent profile.
+            Calibrate your personal autonomous agent profile. All identity and email
+            data will synchronize directly from your Google account.
           </p>
 
           {/* Profile Form */}
-          <form onSubmit={handleGoogleSignUp} className="space-y-4 text-left mb-6">
+          <form onSubmit={handleSignUp} className="space-y-4 text-left mb-6">
             <div>
               <label
                 htmlFor="fullName"
                 className="block text-xs font-semibold text-[#444746] uppercase tracking-wider mb-1.5"
               >
-                Full Name
+                Preferred Name
               </label>
               <input
                 id="fullName"
@@ -88,25 +90,6 @@ export default function SignUpPage() {
                 value={formData.fullName}
                 onChange={handleChange}
                 placeholder="e.g. Aditya Nanda"
-                className="w-full rounded-xl border border-[#e0e3e7] bg-[#f8fafd] px-4 py-2.5 text-sm text-[#1f1f1f] placeholder:text-[#747775] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] focus:bg-white transition-all"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-xs font-semibold text-[#444746] uppercase tracking-wider mb-1.5"
-              >
-                Email Address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="e.g. aditya@example.com"
                 className="w-full rounded-xl border border-[#e0e3e7] bg-[#f8fafd] px-4 py-2.5 text-sm text-[#1f1f1f] placeholder:text-[#747775] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] focus:bg-white transition-all"
               />
             </div>
@@ -138,7 +121,7 @@ export default function SignUpPage() {
                   htmlFor="role"
                   className="block text-xs font-semibold text-[#444746] uppercase tracking-wider mb-1.5"
                 >
-                  Role / Profession
+                  Role / Title
                 </label>
                 <input
                   id="role"
@@ -158,7 +141,7 @@ export default function SignUpPage() {
                 htmlFor="workingHours"
                 className="block text-xs font-semibold text-[#444746] uppercase tracking-wider mb-1.5"
               >
-                Schedule Preference
+                Schedule Preference Rule
               </label>
               <select
                 id="workingHours"
@@ -167,13 +150,13 @@ export default function SignUpPage() {
                 onChange={handleChange}
                 className="w-full rounded-xl border border-[#e0e3e7] bg-[#f8fafd] px-4 py-2.5 text-sm text-[#1f1f1f] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] focus:bg-white transition-all cursor-pointer"
               >
-                <option value="10:00 AM – 7:00 PM">
+                <option value="Avoid meetings before 10:00 AM">
                   Avoid meetings before 10:00 AM (Recommended)
                 </option>
-                <option value="9:00 AM – 6:00 PM">
+                <option value="Standard Business Hours (9:00 AM – 6:00 PM)">
                   Standard Business Hours (9:00 AM – 6:00 PM)
                 </option>
-                <option value="11:00 AM – 8:00 PM">
+                <option value="Late Focus Schedule (11:00 AM – 8:00 PM)">
                   Late Focus Schedule (11:00 AM – 8:00 PM)
                 </option>
               </select>
@@ -188,7 +171,7 @@ export default function SignUpPage() {
               {isSubmitting ? (
                 <Loader2 className="w-5 h-5 animate-spin text-[#0b57d0]" />
               ) : (
-                <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     fill="#4285F4"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -207,7 +190,7 @@ export default function SignUpPage() {
                   />
                 </svg>
               )}
-              <span>Complete Setup with Google</span>
+              <span>Complete Setup & Connect Google</span>
             </button>
           </form>
 

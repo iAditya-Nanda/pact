@@ -49,18 +49,36 @@ body {
   isolation: isolate;
 }
 
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
-
 ::view-transition-old(root) {
-  z-index: 1;
+  animation: none !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  z-index: 1 !important;
 }
 
 ::view-transition-new(root) {
-  z-index: 9999;
+  animation: circular-reveal 0.65s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  mix-blend-mode: normal !important;
+  z-index: 9999 !important;
+}
+
+@keyframes circular-reveal {
+  0% {
+    -webkit-clip-path: circle(0px at var(--x, 50%) var(--y, 50%));
+    clip-path: circle(0px at var(--x, 50%) var(--y, 50%));
+  }
+  100% {
+    -webkit-clip-path: circle(var(--r, 150vmax) at var(--x, 50%) var(--y, 50%));
+    clip-path: circle(var(--r, 150vmax) at var(--x, 50%) var(--y, 50%));
+  }
+}
+
+/* Prevent double-transition color jitter while View Transition captures snapshot */
+html.pact-theme-transitioning,
+html.pact-theme-transitioning *,
+html.pact-theme-transitioning *::before,
+html.pact-theme-transitioning *::after {
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

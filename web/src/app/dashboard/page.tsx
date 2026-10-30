@@ -84,28 +84,26 @@ export default function DashboardPage() {
       Math.max(y, window.innerHeight - y)
     );
 
-    const transition = doc.startViewTransition(() => {
-      flushSync(() => {
-        applyTheme();
-      });
-    });
+    document.documentElement.style.setProperty("--x", `${x}px`);
+    document.documentElement.style.setProperty("--y", `${y}px`);
+    document.documentElement.style.setProperty("--r", `${endRadius}px`);
+    document.documentElement.classList.add("pact-theme-transitioning");
 
-    transition.ready.then(() => {
-      const clipPath = [
-        `circle(0px at ${x}px ${y}px)`,
-        `circle(${endRadius}px at ${x}px ${y}px)`,
-      ];
-      document.documentElement.animate(
-        {
-          clipPath: clipPath,
-        },
-        {
-          duration: 450,
-          easing: "ease-in-out",
-          pseudoElement: "::view-transition-new(root)",
-        }
-      );
-    });
+    try {
+      const transition = doc.startViewTransition(() => {
+        flushSync(() => {
+          applyTheme();
+        });
+      });
+
+      transition.ready?.catch?.(() => {});
+      transition.finished?.finally?.(() => {
+        document.documentElement.classList.remove("pact-theme-transitioning");
+      });
+    } catch {
+      document.documentElement.classList.remove("pact-theme-transitioning");
+      applyTheme();
+    }
   };
 
   const activeUser = user || localCache;

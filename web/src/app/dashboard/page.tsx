@@ -188,9 +188,14 @@ export default function DashboardPage() {
           <div className="w-8 h-8 rounded-lg bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs">
             P
           </div>
-          <span className="text-xl font-bold tracking-tight text-[#1f1f1f]">
-            P.A.C.T.
-          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl font-bold tracking-tight text-[#1f1f1f]">
+              P.A.C.T.
+            </span>
+            <span className="text-xs font-medium text-[#747775] hidden sm:inline">
+              - Proactive Agent for Coordinated Tasks
+            </span>
+          </div>
         </div>
 
         {/* Right End: Non-chip like, clean prominent icon with confirmation modal */}

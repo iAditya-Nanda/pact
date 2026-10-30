@@ -7,14 +7,19 @@ import { ArrowRight } from "lucide-react";
 
 export const Header: React.FC = () => {
   return (
-    <header className="h-16 border-b border-[#e0e3e7] bg-[#f8fafd] px-6 lg:px-10 flex items-center justify-between shrink-0">
+    <header className="h-16 border-b border-[#e0e3e7] bg-[#f8fafd] px-4 lg:px-6 flex items-center justify-between shrink-0">
       <Link href="/" className="flex items-center gap-3 group cursor-pointer">
         <div className="w-8 h-8 rounded-lg bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs transition-transform group-hover:scale-105">
           P
         </div>
-        <span className="text-xl font-bold tracking-tight text-[#1f1f1f]">
-          PACT
-        </span>
+        <div className="flex items-baseline gap-2">
+          <span className="text-xl font-bold tracking-tight text-[#1f1f1f]">
+            P.A.C.T.
+          </span>
+          <span className="text-xs font-medium text-[#747775] hidden sm:inline">
+            - Proactive Agent for Coordinated Tasks
+          </span>
+        </div>
       </Link>
 
       <div className="flex items-center gap-3">

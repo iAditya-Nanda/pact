@@ -30,7 +30,7 @@ class ToolExecutionResult(BaseModel):
     call_id: str
     tool_name: str
     status: ToolExecutionStatus
-    data: Optional[Dict[str, Any]] = None
+    data: Optional[Any] = None
     error: Optional[str] = None
     idempotency_key: str
     verification: Optional[VerificationResult] = None

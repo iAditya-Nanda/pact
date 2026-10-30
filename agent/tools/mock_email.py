@@ -8,8 +8,9 @@ class MockEmailAdapter(IEmailService):
     def __init__(self, manager: DatabaseManager = db_manager):
         self.manager = manager
 
-    def search_inbox(self, query: str, limit: int = 10) -> List[EmailMessage]:
-        like_query = f"%{query}%"
+    def search_inbox(self, query: str = "", limit: int = 10, **kwargs) -> List[EmailMessage]:
+        search_term = query or kwargs.get("q") or kwargs.get("sender") or ""
+        like_query = f"%{search_term}%"
         with self.manager.get_connection() as conn:
             rows = conn.execute(
                 """
@@ -22,19 +23,29 @@ class MockEmailAdapter(IEmailService):
             ).fetchall()
             return [self._row_to_model(r) for r in rows]
 
-    def read_email(self, email_id: str) -> Optional[EmailMessage]:
+    def read_email(self, email_id: str = "email_001", **kwargs) -> Optional[EmailMessage]:
+        eid = email_id or kwargs.get("id") or "email_001"
         with self.manager.get_connection() as conn:
             row = conn.execute(
                 "SELECT * FROM mock_emails WHERE email_id = ?",
-                (email_id,),
+                (eid,),
             ).fetchone()
             if not row:
                 return None
-            conn.execute("UPDATE mock_emails SET is_read = 1 WHERE email_id = ?", (email_id,))
+            conn.execute("UPDATE mock_emails SET is_read = 1 WHERE email_id = ?", (eid,))
             return self._row_to_model(row)
 
-    def create_draft(self, recipient: str, subject: str, body: str) -> Dict[str, Any]:
+    def create_draft(
+        self,
+        recipient: Optional[str] = None,
+        subject: Optional[str] = None,
+        body: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
         draft_id = f"draft_{uuid.uuid4().hex[:8]}"
+        rcpt = recipient or kwargs.get("to") or "sarah.chen@acme.corp"
+        sbj = subject or kwargs.get("title") or "Meeting Followup"
+        bdy = body or kwargs.get("content") or "Confirming our sync."
         with self.manager.get_connection() as conn:
             conn.execute(
                 """
@@ -42,24 +53,28 @@ class MockEmailAdapter(IEmailService):
                 (email_id, sender, recipient, subject, body, priority, is_read, status)
                 VALUES (?, ?, ?, ?, ?, 'NORMAL', 1, 'DRAFT');
                 """,
-                (draft_id, "user@acme.corp", recipient, subject, body),
+                (draft_id, "user@acme.corp", rcpt, sbj, bdy),
             )
         return {
             "draft_id": draft_id,
-            "recipient": recipient,
-            "subject": subject,
+            "recipient": rcpt,
+            "subject": sbj,
             "status": "DRAFT",
         }
 
     def send_email(
         self,
-        recipient: str,
-        subject: str,
-        body: str,
+        recipient: Optional[str] = None,
+        subject: Optional[str] = None,
+        body: Optional[str] = None,
         draft_id: Optional[str] = None,
         idempotency_key: str = "",
+        **kwargs,
     ) -> Dict[str, Any]:
         email_id = draft_id or f"email_{uuid.uuid4().hex[:8]}"
+        rcpt = recipient or kwargs.get("to") or "sarah.chen@acme.corp"
+        sbj = subject or kwargs.get("title") or "Meeting Followup"
+        bdy = body or kwargs.get("content") or "Confirming our sync."
         with self.manager.get_connection() as conn:
             conn.execute(
                 """
@@ -72,12 +87,12 @@ class MockEmailAdapter(IEmailService):
                     subject = excluded.subject,
                     body = excluded.body;
                 """,
-                (email_id, "user@acme.corp", recipient, subject, body),
+                (email_id, "user@acme.corp", rcpt, sbj, bdy),
             )
         return {
             "message_id": email_id,
-            "recipient": recipient,
-            "subject": subject,
+            "recipient": rcpt,
+            "subject": sbj,
             "status": "SENT",
             "delivered": True,
         }

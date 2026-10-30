@@ -58,12 +58,22 @@ class AuditRepository:
         self,
         action_id: str,
         status: StepStatus,
-        result: Optional[Dict[str, Any]] = None,
+        result: Optional[Any] = None,
         error: Optional[str] = None,
         is_verified: bool = False,
         verification_details: Optional[str] = None,
     ) -> None:
         """Record the terminal result and verification state of an action."""
+        serialized_result = None
+        if result is not None:
+            try:
+                serialized_result = json.dumps(
+                    result,
+                    default=lambda o: o.model_dump() if hasattr(o, "model_dump") else str(o),
+                )
+            except Exception:
+                serialized_result = str(result)
+
         with self.manager.get_connection() as conn:
             conn.execute(
                 """
@@ -78,7 +88,7 @@ class AuditRepository:
                 """,
                 (
                     status.value,
-                    json.dumps(result) if result is not None else None,
+                    serialized_result,
                     error,
                     1 if is_verified else 0,
                     verification_details,

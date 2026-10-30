@@ -99,7 +99,15 @@ class ToolRegistry:
         # 3. Dispatch to Tool Adapter
         try:
             raw_result = handler(**parameters)
-            data_dict = raw_result.model_dump() if hasattr(raw_result, "model_dump") else raw_result
+            if isinstance(raw_result, list):
+                data_dict = [
+                    item.model_dump() if hasattr(item, "model_dump") else item
+                    for item in raw_result
+                ]
+            elif hasattr(raw_result, "model_dump"):
+                data_dict = raw_result.model_dump()
+            else:
+                data_dict = raw_result
         except Exception as e:
             elapsed = int((time.time() - start_time) * 1000)
             self.audit_repo.record_action_result(

@@ -56,22 +56,24 @@ class MockTaskAdapter(ITaskService):
 
     def complete_task(
         self,
-        task_id: str,
+        task_id: Optional[str] = None,
         idempotency_key: str = "",
+        **kwargs,
     ) -> Dict[str, Any]:
+        tid = task_id or kwargs.get("id") or "task_001"
         with self.manager.get_connection() as conn:
             conn.execute(
                 "UPDATE mock_tasks SET status = 'COMPLETED' WHERE task_id = ?",
-                (task_id,),
+                (tid,),
             )
         return {
-            "task_id": task_id,
+            "task_id": tid,
             "status": "COMPLETED",
             "completed": True,
             # Compensating action to uncomplete / reopen task
             "compensating_action": {
                 "tool_name": "reopen_task",
-                "parameters": {"task_id": task_id},
+                "parameters": {"task_id": tid},
             },
         }
 

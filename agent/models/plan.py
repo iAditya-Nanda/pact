@@ -31,7 +31,7 @@ class PlanStep(BaseModel):
     )
     idempotency_key: str = Field(default="", description="Deterministic cryptographic key to prevent duplicate execution")
     status: StepStatus = Field(default=StepStatus.PENDING, description="Current execution state of this step")
-    result: Optional[Dict[str, Any]] = Field(default=None, description="Output payload returned upon successful execution")
+    result: Optional[Any] = Field(default=None, description="Output payload returned upon successful execution")
     error: Optional[str] = Field(default=None, description="Failure details if step encountered an error")
 
     def compute_idempotency_key(self, run_id: str) -> str:

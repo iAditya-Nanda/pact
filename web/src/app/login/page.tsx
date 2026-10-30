@@ -10,13 +10,25 @@ export default function LoginPage() {
   const { user, loginWithGoogle, isLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isVerifyingSession, setIsVerifyingSession] = useState(true);
   const router = useRouter();
 
-  // If already logged in, redirect directly to dashboard
+  // 1-second deliberate verification of active session
   useEffect(() => {
-    if (user) {
-      router.push("/dashboard");
-    }
+    const timer = setTimeout(() => {
+      const stored =
+        typeof window !== "undefined"
+          ? localStorage.getItem("pact_auth_user")
+          : null;
+
+      if (user || stored) {
+        router.push("/dashboard");
+      } else {
+        setIsVerifyingSession(false);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
   }, [user, router]);
 
   const handleSignIn = async () => {
@@ -27,9 +39,13 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error("Firebase Sign-In Error:", err);
       if (err.code === "auth/popup-closed-by-user") {
-        setErrorMessage("Sign-in window closed before completing authentication. Please try again.");
+        setErrorMessage(
+          "Sign-in window closed before completing authentication. Please try again."
+        );
       } else if (err.code === "auth/unauthorized-domain") {
-        setErrorMessage("Domain not authorized in Firebase Console (Authentication > Settings > Authorized Domains).");
+        setErrorMessage(
+          "Domain not authorized in Firebase Console (Authentication > Settings > Authorized Domains)."
+        );
       } else {
         setErrorMessage(err.message || "Failed to complete Google Sign-In.");
       }
@@ -37,6 +53,38 @@ export default function LoginPage() {
       setIsSubmitting(false);
     }
   };
+
+  // Dedicated 1-second session verification screen
+  if (isVerifyingSession) {
+    return (
+      <div className="h-screen max-h-screen flex flex-col justify-between overflow-hidden bg-[#f8fafd] select-none text-[#1f1f1f]">
+        <header className="h-16 border-b border-[#e0e3e7] bg-[#f8fafd] px-6 lg:px-10 flex items-center justify-between shrink-0">
+          <Link href="/" className="flex items-center gap-3 group cursor-pointer">
+            <div className="w-8 h-8 rounded-lg bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs">
+              P
+            </div>
+            <span className="text-xl font-bold tracking-tight text-[#1f1f1f]">
+              PACT
+            </span>
+          </Link>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-6 py-8">
+          <div className="flex flex-col items-center gap-3.5 animate-in fade-in duration-200">
+            <Loader2 className="w-8 h-8 animate-spin text-[#0b57d0]" />
+            <span className="text-sm font-medium text-[#444746]">
+              Verifying active session...
+            </span>
+          </div>
+        </main>
+
+        <footer className="h-12 border-t border-[#e0e3e7] bg-[#f8fafd] px-6 lg:px-10 flex items-center justify-between text-xs text-[#747775] shrink-0">
+          <div>PACT • Authentication Gateway</div>
+          <div>Secure session verification</div>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen max-h-screen flex flex-col justify-between overflow-hidden bg-[#f8fafd] select-none">

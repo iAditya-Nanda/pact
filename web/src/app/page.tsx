@@ -52,8 +52,8 @@ export default function LandingPage() {
         {/* Full-Bleed 3D WebGL Jellyfish Layer */}
         <Scene3D mode="landing" />
 
-        {/* Subtle Ambient Vignette Layer */}
-        <div className="fixed inset-0 pointer-events-none z-1 bg-gradient-to-b from-transparent via-[#f8fafd]/20 dark:via-[#0c0e14]/25 to-[#f8fafd]/80 dark:to-[#0c0e14]/85" />
+        {/* Subtle Ambient Vignette Layer - Ultra-Clear for Jellyfish Visibility */}
+        <div className="fixed inset-0 pointer-events-none z-1 bg-gradient-to-b from-transparent via-transparent to-[#f8fafd]/25 dark:to-[#0c0e14]/30" />
 
         {/* Main Content Container with Slide Transitions */}
         <div ref={mainRef} className="relative z-10 flex flex-col min-h-screen">
@@ -94,17 +94,17 @@ export default function LandingPage() {
 
               <button
                 onClick={() => navigateWithTransition("/login")}
-                className="w-full sm:w-auto px-7 py-3 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-2xl hover:bg-white/30 dark:hover:bg-white/20 active:scale-98 border border-white/40 dark:border-white/15 text-[#1f1f1f] dark:text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center cursor-pointer"
+                className="w-full sm:w-auto px-7 py-3 rounded-full bg-white/[0.08] dark:bg-white/[0.04] backdrop-blur-md hover:bg-white/[0.15] dark:hover:bg-white/[0.08] active:scale-98 border border-white/30 dark:border-white/10 text-[#1f1f1f] dark:text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center cursor-pointer"
               >
                 <span>Executive Login</span>
               </button>
             </div>
 
-            {/* 3 Pure Glassmorphic KPI Cards - Jellyfish Visible Behind */}
+            {/* 3 Ultra-Transparent Glassmorphic KPI Cards - Jellyfish Clearly Visible Behind */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl text-left">
               {/* Card 1: Schedule Integrity */}
-              <div className="rounded-2xl bg-white/25 dark:bg-[#1d1f24]/25 backdrop-blur-2xl border border-white/50 dark:border-white/10 p-5 flex items-center gap-4 shadow-lg hover:border-white/70 dark:hover:border-white/20 transition-all">
-                <div className="w-11 h-11 rounded-full bg-[#c4eed0]/80 dark:bg-[#0f5223]/80 backdrop-blur-md text-[#146c2e] dark:text-[#81c995] flex items-center justify-center shrink-0">
+              <div className="rounded-2xl bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md border border-white/30 dark:border-white/10 p-5 flex items-center gap-4 shadow-md hover:border-white/50 dark:hover:border-white/20 transition-all">
+                <div className="w-11 h-11 rounded-full bg-[#c4eed0]/40 dark:bg-[#0f5223]/40 backdrop-blur-md text-[#146c2e] dark:text-[#81c995] flex items-center justify-center shrink-0">
                   <CalendarCheck2 className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -118,8 +118,8 @@ export default function LandingPage() {
               </div>
 
               {/* Card 2: Priority Deadlines */}
-              <div className="rounded-2xl bg-white/25 dark:bg-[#1d1f24]/25 backdrop-blur-2xl border border-white/50 dark:border-white/10 p-5 flex items-center gap-4 shadow-lg hover:border-white/70 dark:hover:border-white/20 transition-all">
-                <div className="w-11 h-11 rounded-full bg-[#d3e3fd]/80 dark:bg-[#0842a0]/80 backdrop-blur-md text-[#0b57d0] dark:text-[#a8c7fa] flex items-center justify-center shrink-0">
+              <div className="rounded-2xl bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md border border-white/30 dark:border-white/10 p-5 flex items-center gap-4 shadow-md hover:border-white/50 dark:hover:border-white/20 transition-all">
+                <div className="w-11 h-11 rounded-full bg-[#d3e3fd]/40 dark:bg-[#0842a0]/40 backdrop-blur-md text-[#0b57d0] dark:text-[#a8c7fa] flex items-center justify-center shrink-0">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -133,8 +133,8 @@ export default function LandingPage() {
               </div>
 
               {/* Card 3: Action Clearance Queue */}
-              <div className="rounded-2xl bg-white/25 dark:bg-[#1d1f24]/25 backdrop-blur-2xl border border-white/50 dark:border-white/10 p-5 flex items-center gap-4 shadow-lg hover:border-white/70 dark:hover:border-white/20 transition-all">
-                <div className="w-11 h-11 rounded-full bg-[#e8def8]/80 dark:bg-[#381e72]/80 backdrop-blur-md text-[#65558f] dark:text-[#d0bcff] flex items-center justify-center shrink-0">
+              <div className="rounded-2xl bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md border border-white/30 dark:border-white/10 p-5 flex items-center gap-4 shadow-md hover:border-white/50 dark:hover:border-white/20 transition-all">
+                <div className="w-11 h-11 rounded-full bg-[#e8def8]/40 dark:bg-[#381e72]/40 backdrop-blur-md text-[#65558f] dark:text-[#d0bcff] flex items-center justify-center shrink-0">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -157,7 +157,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* SECTION 2: THE THREE WORKSPACE PILLARS - PURE GLASS CARDS */}
+          {/* SECTION 2: THE THREE WORKSPACE PILLARS - ULTRA-TRANSPARENT GLASS */}
           <section className="py-20 px-4 sm:px-6 lg:px-12 max-w-5xl mx-auto w-full">
             <div className="text-center max-w-2xl mx-auto mb-12">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-[#1f1f1f] dark:text-white mb-3">
@@ -170,7 +170,7 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {/* Pillar 1: Gmail */}
-              <div className="rounded-3xl bg-white/25 dark:bg-[#1d1f24]/25 backdrop-blur-2xl border border-white/50 dark:border-white/10 p-6 shadow-xl flex flex-col justify-between hover:border-white/70 transition-all">
+              <div className="rounded-3xl bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md border border-white/30 dark:border-white/10 p-6 shadow-lg flex flex-col justify-between hover:border-white/50 transition-all">
                 <div>
                   <div className="mb-4">
                     <img src="/icons/gmail.png" alt="Gmail" className="w-8 h-8 object-contain" />
@@ -182,13 +182,13 @@ export default function LandingPage() {
                     Prioritizes critical correspondence, flags urgent security alerts, and drafts context-rich replies.
                   </p>
                 </div>
-                <div className="pt-3.5 mt-4 border-t border-white/30 dark:border-white/10 text-3xs font-semibold text-[#0b57d0] dark:text-[#38bdf8]">
+                <div className="pt-3.5 mt-4 border-t border-white/20 dark:border-white/10 text-3xs font-semibold text-[#0b57d0] dark:text-[#38bdf8]">
                   Real-time unread synchronization
                 </div>
               </div>
 
               {/* Pillar 2: Calendar */}
-              <div className="rounded-3xl bg-white/25 dark:bg-[#1d1f24]/25 backdrop-blur-2xl border border-white/50 dark:border-white/10 p-6 shadow-xl flex flex-col justify-between hover:border-white/70 transition-all">
+              <div className="rounded-3xl bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md border border-white/30 dark:border-white/10 p-6 shadow-lg flex flex-col justify-between hover:border-white/50 transition-all">
                 <div>
                   <div className="mb-4">
                     <img src="/icons/calendar.png" alt="Calendar" className="w-8 h-8 object-contain" />
@@ -200,13 +200,13 @@ export default function LandingPage() {
                     Protects focus blocks, detects meeting overlaps, and calculates weekly meeting loads.
                   </p>
                 </div>
-                <div className="pt-3.5 mt-4 border-t border-white/30 dark:border-white/10 text-3xs font-semibold text-[#0b57d0] dark:text-[#38bdf8]">
+                <div className="pt-3.5 mt-4 border-t border-white/20 dark:border-white/10 text-3xs font-semibold text-[#0b57d0] dark:text-[#38bdf8]">
                   Google Meet integration
                 </div>
               </div>
 
               {/* Pillar 3: Tasks */}
-              <div className="rounded-3xl bg-white/25 dark:bg-[#1d1f24]/25 backdrop-blur-2xl border border-white/50 dark:border-white/10 p-6 shadow-xl flex flex-col justify-between hover:border-white/70 transition-all">
+              <div className="rounded-3xl bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md border border-white/30 dark:border-white/10 p-6 shadow-lg flex flex-col justify-between hover:border-white/50 transition-all">
                 <div>
                   <div className="mb-4">
                     <img src="/icons/tasks.svg" alt="Tasks" className="w-8 h-8 object-contain" />
@@ -218,16 +218,16 @@ export default function LandingPage() {
                     Turns debriefs and emails into actionable items with due dates, priorities, and status tracking.
                   </p>
                 </div>
-                <div className="pt-3.5 mt-4 border-t border-white/30 dark:border-white/10 text-3xs font-semibold text-[#0b57d0] dark:text-[#38bdf8]">
+                <div className="pt-3.5 mt-4 border-t border-white/20 dark:border-white/10 text-3xs font-semibold text-[#0b57d0] dark:text-[#38bdf8]">
                   HMAC SHA-256 idempotency locks
                 </div>
               </div>
             </div>
           </section>
 
-          {/* SECTION 3: GUARDED EXECUTION SPECIFICATION - PURE GLASS */}
+          {/* SECTION 3: GUARDED EXECUTION SPECIFICATION - ULTRA-TRANSPARENT GLASS */}
           <section className="py-20 px-4 sm:px-6 lg:px-12 max-w-5xl mx-auto w-full">
-            <div className="rounded-3xl bg-white/25 dark:bg-[#1d1f24]/25 backdrop-blur-2xl border border-white/50 dark:border-white/10 p-8 md:p-10 shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="rounded-3xl bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md border border-white/30 dark:border-white/10 p-8 md:p-10 shadow-lg flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="max-w-md">
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1f1f1f] dark:text-white mb-3">
                   Zero Black-Box Actions
@@ -238,7 +238,7 @@ export default function LandingPage() {
               </div>
 
               <div className="w-full md:w-80 space-y-3">
-                <div className="p-4 rounded-2xl bg-white/30 dark:bg-black/20 backdrop-blur-xl border border-white/40 dark:border-white/10 text-xs">
+                <div className="p-4 rounded-2xl bg-white/[0.1] dark:bg-white/[0.04] backdrop-blur-md border border-white/25 dark:border-white/10 text-xs">
                   <div className="text-3xs font-bold text-[#747775] dark:text-[#8e9099] uppercase mb-0.5">
                     Clearance Rule
                   </div>
@@ -247,7 +247,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[#0b57d0]/15 dark:bg-[#38bdf8]/15 backdrop-blur-xl border border-[#0b57d0]/30 dark:border-[#38bdf8]/30 flex items-center justify-between text-xs">
+                <div className="p-4 rounded-2xl bg-[#0b57d0]/10 dark:bg-[#38bdf8]/10 backdrop-blur-md border border-[#0b57d0]/25 dark:border-[#38bdf8]/25 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 text-[#0b57d0] dark:text-[#38bdf8] font-semibold">
                     <ShieldCheck className="w-4 h-4" />
                     <span>Safe Mode Active</span>
@@ -260,9 +260,9 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* SECTION 4: CALL TO ACTION BANNER - PURE GLASS */}
+          {/* SECTION 4: CALL TO ACTION BANNER - ULTRA-TRANSPARENT GLASS */}
           <section className="py-20 px-4 sm:px-6 lg:px-12 max-w-4xl mx-auto w-full text-center">
-            <div className="rounded-3xl bg-white/25 dark:bg-[#1d1f24]/25 backdrop-blur-2xl border border-white/50 dark:border-white/10 p-8 md:p-12 shadow-2xl">
+            <div className="rounded-3xl bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md border border-white/30 dark:border-white/10 p-8 md:p-12 shadow-xl">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-[#1f1f1f] dark:text-white mb-3">
                 Experience Autonomous Executive Computing with P.A.C.T.
               </h2>
@@ -281,7 +281,7 @@ export default function LandingPage() {
 
                 <button
                   onClick={() => navigateWithTransition("/login")}
-                  className="w-full sm:w-auto px-7 py-3 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-2xl hover:bg-white/30 dark:hover:bg-white/20 active:scale-98 border border-white/40 dark:border-white/15 text-[#1f1f1f] dark:text-white font-semibold text-xs shadow-sm transition-all flex items-center justify-center cursor-pointer"
+                  className="w-full sm:w-auto px-7 py-3 rounded-full bg-white/[0.08] dark:bg-white/[0.04] backdrop-blur-md hover:bg-white/[0.15] dark:hover:bg-white/[0.08] active:scale-98 border border-white/30 dark:border-white/10 text-[#1f1f1f] dark:text-white font-semibold text-xs shadow-sm transition-all flex items-center justify-center cursor-pointer"
                 >
                   <span>Return to Session</span>
                 </button>

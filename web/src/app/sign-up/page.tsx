@@ -160,8 +160,8 @@ export default function SignUpPage() {
       {/* 3D WebGL Jellyfish Layer (mode="signup") */}
       <Scene3D mode="signup" />
 
-      {/* Ambient Gradient Vignette */}
-      <div className="fixed inset-0 pointer-events-none z-1 bg-gradient-to-r from-transparent via-[#f8fafd]/20 dark:via-[#0c0e14]/30 to-[#f8fafd]/70 dark:to-[#0c0e14]/80" />
+      {/* Ambient Gradient Vignette - Ultra-Subtle for Full Jellyfish Clarity */}
+      <div className="fixed inset-0 pointer-events-none z-1 bg-gradient-to-r from-transparent via-transparent to-[#f8fafd]/20 dark:to-[#0c0e14]/30" />
 
       <div className="relative z-10 flex flex-col min-h-screen justify-between">
         {/* Top Header Bar */}
@@ -184,9 +184,9 @@ export default function SignUpPage() {
           </button>
         </header>
 
-        {/* Sign Up Canvas: Glassmorphic Form, Jellyfish swimming in 3D water */}
+        {/* Sign Up Canvas: Ultra-Transparent Glassmorphic Form, Jellyfish swimming in 3D water */}
         <main className="flex-1 flex items-center justify-center lg:justify-start px-6 lg:px-24 py-8">
-          <div className="max-w-md w-full bg-white/25 dark:bg-[#1d1f24]/30 backdrop-blur-2xl rounded-3xl border border-white/50 dark:border-white/10 p-7 sm:p-8 shadow-2xl text-center relative">
+          <div className="max-w-md w-full bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md rounded-3xl border border-white/30 dark:border-white/10 p-7 sm:p-8 shadow-xl text-center relative">
             <h1 className="text-2xl font-bold text-[#1f1f1f] dark:text-white tracking-tight mb-1.5">
               Create your PACT Profile
             </h1>

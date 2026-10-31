@@ -139,8 +139,8 @@ export default function LoginPage() {
       {/* 3D WebGL Jellyfish Layer (mode="login") */}
       <Scene3D mode="login" />
 
-      {/* Ambient Gradient Vignette */}
-      <div className="fixed inset-0 pointer-events-none z-1 bg-gradient-to-r from-transparent via-[#f8fafd]/20 dark:via-[#0c0e14]/30 to-[#f8fafd]/70 dark:to-[#0c0e14]/80" />
+      {/* Ambient Gradient Vignette - Ultra-Subtle for Full Jellyfish Clarity */}
+      <div className="fixed inset-0 pointer-events-none z-1 bg-gradient-to-r from-transparent via-transparent to-[#f8fafd]/20 dark:to-[#0c0e14]/30" />
 
       <div className="relative z-10 flex flex-col min-h-screen justify-between">
         {/* Top Header Bar */}
@@ -163,9 +163,9 @@ export default function LoginPage() {
           </button>
         </header>
 
-        {/* Login Canvas: Jellyfish swimming on right, pure glass card */}
+        {/* Login Canvas: Jellyfish swimming dynamically on right, ultra-transparent glass card */}
         <main className="flex-1 flex items-center justify-center lg:justify-start px-6 lg:px-24 py-8">
-          <div className="max-w-md w-full bg-white/25 dark:bg-[#1d1f24]/30 backdrop-blur-2xl rounded-3xl border border-white/50 dark:border-white/10 p-8 sm:p-9 shadow-2xl text-center relative">
+          <div className="max-w-md w-full bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md rounded-3xl border border-white/30 dark:border-white/10 p-8 sm:p-9 shadow-xl text-center relative">
             <div className="w-12 h-12 rounded-2xl bg-[#0b57d0] text-white flex items-center justify-center mx-auto mb-5 font-bold text-lg shadow-md shadow-[#0b57d0]/25">
               P
             </div>

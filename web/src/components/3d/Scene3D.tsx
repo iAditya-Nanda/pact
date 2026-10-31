@@ -112,16 +112,16 @@ export const Scene3D: React.FC<Scene3DProps> = ({
             mesh.material = new THREE.MeshPhysicalMaterial({
               color: new THREE.Color(0x38bdf8), // Sky Blue (Tailwind sky-400)
               emissive: new THREE.Color(0x0284c7), // Glowing Sky Blue
-              emissiveIntensity: 0.58,
-              roughness: 0.1,
-              metalness: 0.05,
-              transmission: 0.78, // High glass translucency so it glows beautifully
-              thickness: 1.6,
+              emissiveIntensity: 0.65,
+              roughness: 0.08,
+              metalness: 0.02,
+              transmission: 0.82, // High glass translucency so it glows beautifully
+              thickness: 1.4,
               ior: 1.333, // Water refractive index
               transparent: true,
-              opacity: 0.9,
-              clearcoat: 0.85,
-              clearcoatRoughness: 0.08,
+              opacity: 0.92,
+              clearcoat: 0.9,
+              clearcoatRoughness: 0.05,
             });
           }
         });
@@ -133,7 +133,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({
           const mixer = new THREE.AnimationMixer(model);
           const clip = gltf.animations[0];
           const action = mixer.clipAction(clip);
-          action.setEffectiveTimeScale(0.72); // Silky, organic swimming tempo
+          action.setEffectiveTimeScale(0.4); // Ultra-gentle, slow tentacle wave tempo
           action.play();
           mixerRef.current = mixer;
         }
@@ -167,22 +167,22 @@ export const Scene3D: React.FC<Scene3DProps> = ({
 
     window.addEventListener("resize", handleResize);
 
-    // 9. Autonomous Dynamic Water Simulation Loop
+    // 9. Realistic Asymmetrical Vortex Ring Jet Propulsion & Steering Simulation
     const clock = new THREE.Clock();
     let animationFrameId: number;
 
-    // Swimming path memory
-    let prevX = 0;
-    let prevY = 0;
-    let currentLaneX = mode === "landing" ? 0.3 : 2.2;
+    // Movement & physics states
+    const velocity = new THREE.Vector3(0, 0, 0);
+    const forwardVec = new THREE.Vector3(0, 1, 0); // Model bell apex points along local +Y
+    const currentHeading = new THREE.Vector3(0.15, 0.95, 0.05).normalize();
+    const targetHeading = new THREE.Vector3(0.15, 0.95, 0.05).normalize();
+    const baseScale = 0.66;
+    let wanderAngle = Math.PI * 0.4; // Starts swimming slightly diagonally upward
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
+      const delta = Math.min(clock.getDelta(), 0.05); // Safe clamp
       const t = clock.getElapsedTime();
-
-      // Update skeletal swimming contraction
-      if (mixerRef.current) mixerRef.current.update(delta);
 
       // Smooth cursor damping
       mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.035;
@@ -191,61 +191,130 @@ export const Scene3D: React.FC<Scene3DProps> = ({
       if (jellyfishGroupRef.current) {
         const jf = jellyfishGroupRef.current;
 
-        // Smoothly interpolate lane when transitioning between screens:
-        // Landing: centered aquatic roaming (x ~ 0.2)
-        // Login / Signup: swims to the right side (x ~ 2.2)
-        const targetLaneX = modeRef.current === "landing" ? 0.3 : 2.2;
-        currentLaneX += (targetLaneX - currentLaneX) * 0.03;
+        // -----------------------------------------------------------
+        // 1. MODULO CYCLE TIMER (2.0-second repeating biological cycle)
+        // -----------------------------------------------------------
+        const cycle = t % 2.0;
+        const isPhase1 = cycle < 0.4; // Phase 1: Power Stroke (0.0s to 0.4s)
 
-        // REALISTIC UNDERWATER SWIMMING PHYSICS:
-        // 1. Multi-harmonic circular & figure-8 water current drift (sometimes slow, sometimes fast)
-        const currentSpeed = 0.35 + Math.sin(t * 0.25) * 0.15; // Speed dynamically varies!
-        const orbitT = t * currentSpeed;
+        // -----------------------------------------------------------
+        // 2. BELL DEFORMATION (Asymmetrical Vortex Ring Contraction)
+        // -----------------------------------------------------------
+        if (isPhase1) {
+          // Phase 1 (0.0s - 0.4s): Rapid bell contraction (Power stroke)
+          const p = cycle / 0.4; // 0 to 1
+          const contraction = Math.sin(p * Math.PI);
 
-        // Gentle circular loops through 3D water
-        const circularX = Math.cos(orbitT * 0.6) * 1.6 + Math.sin(orbitT * 1.2) * 0.5;
-        const circularY = Math.sin(orbitT * 0.8) * 1.0 + Math.cos(orbitT * 0.4) * 0.4;
-        const circularZ = Math.sin(orbitT * 0.5) * 0.7;
+          // Bell radius narrows (X and Z contract down to ~0.7x)
+          // Bell height elongates (Y expands slightly)
+          const scaleXZ = baseScale * (1.0 - 0.30 * contraction);
+          const scaleY = baseScale * (1.0 + 0.18 * contraction);
+          jf.scale.set(scaleXZ, scaleY, scaleXZ);
 
-        // 2. Jet propulsion burst: Real jellyfish speed up during contraction, then glide!
-        const propulsionCycle = (t * 2.1) % (Math.PI * 2);
-        const isContracting = propulsionCycle < Math.PI * 0.8;
-        const thrust = isContracting ? Math.sin(propulsionCycle) * 0.18 : Math.sin(propulsionCycle) * 0.05;
+          // Phase 1 Velocity: Apply sharp burst of forward velocity along bell axis
+          const forward = forwardVec.clone().applyQuaternion(jf.quaternion);
+          const thrustMagnitude = Math.sin(p * Math.PI) * 0.022; // Controlled, slow & realistic
+          velocity.addScaledVector(forward, thrustMagnitude * (delta * 60));
+        } else {
+          // Phase 2 (0.4s - 2.0s): Recovery & Coasting
+          // Slowly lerp scale back to relaxed 1.0 (elastic rebound of jelly)
+          jf.scale.x += (baseScale - jf.scale.x) * (0.045 * (delta * 60));
+          jf.scale.y += (baseScale - jf.scale.y) * (0.045 * (delta * 60));
+          jf.scale.z += (baseScale - jf.scale.z) * (0.045 * (delta * 60));
 
-        // Target 3D coordinates
-        const targetX = currentLaneX + circularX + mouseRef.current.x * 0.4;
-        const targetY = circularY + thrust + mouseRef.current.y * 0.3;
-        const targetZ = circularZ + 0.2;
+          // Apply water friction multiplier (0.95) to velocity so jellyfish coasts
+          const friction = Math.pow(0.95, delta * 60);
+          velocity.multiplyScalar(friction);
+        }
 
-        // Smooth fluid motion integration (momentum & inertia)
-        jf.position.x += (targetX - jf.position.x) * 0.04;
-        jf.position.y += (targetY - jf.position.y) * 0.04;
-        jf.position.z += (targetZ - jf.position.z) * 0.04;
+        // Synchronize skeletal animation clip:
+        // Tight trailing tentacles during contraction, slow flaring during recovery
+        if (mixerRef.current) {
+          const animSpeed = isPhase1 ? 0.8 : 0.3;
+          mixerRef.current.update(delta * animSpeed);
+        }
 
-        // 3. Orientation / Banking: Head leads the movement!
-        const velX = jf.position.x - prevX;
-        const velY = jf.position.y - prevY;
-        prevX = jf.position.x;
-        prevY = jf.position.y;
+        // -----------------------------------------------------------
+        // 3. ORGANIC TURNING & HEADING BEHAVIOR (Slow, realistic angles)
+        // -----------------------------------------------------------
+        // Anchor center based on mode:
+        // Landing: centered in website viewport (0.0, 0.0)
+        // Login / Signup: gently swimming on right-hand side (1.05, 0.0)
+        const targetCenterX = modeRef.current === "landing" ? 0.0 : 1.05;
+        const targetCenterY = 0.0;
 
-        // Natural tilt in the direction of swimming
-        const naturalPitch = velY * 2.5 + Math.sin(t * 0.8) * 0.15;
-        const naturalRoll = -velX * 2.2 + Math.cos(t * 0.7) * 0.12;
-        const naturalYaw = (modeRef.current === "landing" ? 0.0 : -0.3) + Math.sin(t * 0.4) * 0.25;
+        const distX = jf.position.x - targetCenterX;
+        const distY = jf.position.y - targetCenterY;
 
-        jf.rotation.x += (naturalPitch - jf.rotation.x) * 0.04;
-        jf.rotation.z += (naturalRoll - jf.rotation.z) * 0.04;
-        jf.rotation.y += (naturalYaw - jf.rotation.y) * 0.04;
+        // Soft boundary steering: gracefully steer toward center when drifting away
+        if (Math.abs(distX) > 0.65 || Math.abs(distY) > 0.55) {
+          const steerX = -distX * 1.4;
+          const steerY = -distY * 1.4 + 0.25; // Slight upward preference like real jellyfish
+          targetHeading.set(steerX, steerY, Math.sin(t * 0.3) * 0.15).normalize();
+        } else {
+          // Inside comfort zone: slow, majestic circular wandering & slight undulation
+          wanderAngle += (Math.sin(t * 0.22) * 0.2 + Math.cos(t * 0.16) * 0.15) * delta;
+          const wanderX = Math.cos(wanderAngle) * 0.6 + mouseRef.current.x * 0.12;
+          const wanderY = Math.abs(Math.sin(wanderAngle)) * 0.55 + 0.35 + mouseRef.current.y * 0.08;
+          const wanderZ = Math.sin(t * 0.2) * 0.12;
+          targetHeading.set(wanderX, wanderY, wanderZ).normalize();
+        }
 
-        // 4. Natural Bell Breathing Pulse (scale pulse matches propulsion)
-        const bellExpansion = 1 + (isContracting ? -0.03 : 0.04) * Math.sin(propulsionCycle);
-        jf.scale.set(0.75 * bellExpansion, 0.75 * (2 - bellExpansion), 0.75 * bellExpansion);
+        // Smoothly interpolate current heading toward target heading (slow, majestic turn rate)
+        currentHeading.lerp(targetHeading, 0.025 * (delta * 60));
+        currentHeading.normalize();
+
+        // -----------------------------------------------------------
+        // 4. BANKING & TILT: Orient the jellyfish's bell in the heading direction!
+        // -----------------------------------------------------------
+        const targetQuat = new THREE.Quaternion().setFromUnitVectors(forwardVec, currentHeading);
+
+        // Add subtle natural water roll into turns
+        const rollAxis = currentHeading.clone().normalize();
+        const rollAngle = Math.sin(t * 0.45) * 0.1;
+        const rollQuat = new THREE.Quaternion().setFromAxisAngle(rollAxis, rollAngle);
+        targetQuat.multiply(rollQuat);
+
+        // Slerp orientation smoothly (majestic 3D banking)
+        jf.quaternion.slerp(targetQuat, 0.028 * (delta * 60));
+
+        // -----------------------------------------------------------
+        // 5. TRANSLATION & ABSOLUTE BOUNDARY CONFINEMENT
+        // -----------------------------------------------------------
+        jf.position.add(velocity);
+
+        // Subtle water buoyancy wave
+        jf.position.y += Math.sin(t * 0.7) * 0.0006;
+
+        // STRICT 100% BOUNDS CHECK: Fish MUST NEVER exit the website dimensions!
+        const boundMinX = modeRef.current === "landing" ? -1.3 : 0.25;
+        const boundMaxX = modeRef.current === "landing" ? 1.3 : 1.85;
+        const boundMinY = -1.05;
+        const boundMaxY = 1.05;
+
+        if (jf.position.x < boundMinX) {
+          jf.position.x = boundMinX;
+          velocity.x = Math.abs(velocity.x) * 0.15;
+        } else if (jf.position.x > boundMaxX) {
+          jf.position.x = boundMaxX;
+          velocity.x = -Math.abs(velocity.x) * 0.15;
+        }
+
+        if (jf.position.y < boundMinY) {
+          jf.position.y = boundMinY;
+          velocity.y = Math.abs(velocity.y) * 0.15;
+        } else if (jf.position.y > boundMaxY) {
+          jf.position.y = boundMaxY;
+          velocity.y = -Math.abs(velocity.y) * 0.15;
+        }
+
+        jf.position.z = THREE.MathUtils.clamp(jf.position.z, -0.4, 0.4);
       }
 
       // Camera subtle parallax
       if (cameraRef.current) {
-        cameraRef.current.position.x += (mouseRef.current.x * 0.25 - cameraRef.current.position.x) * 0.03;
-        cameraRef.current.position.y += (mouseRef.current.y * 0.18 - cameraRef.current.position.y) * 0.03;
+        cameraRef.current.position.x += (mouseRef.current.x * 0.2 - cameraRef.current.position.x) * 0.025;
+        cameraRef.current.position.y += (mouseRef.current.y * 0.14 - cameraRef.current.position.y) * 0.025;
         cameraRef.current.lookAt(0, 0, 0);
       }
 

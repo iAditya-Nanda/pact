@@ -208,61 +208,59 @@ export const Scene3D: React.FC<Scene3DProps> = ({
         const jf = jellyfishGroupRef.current;
 
         // -----------------------------------------------------------
-        // 1. MODULO CYCLE TIMER (2.0-second repeating biological cycle)
+        // 1. MODULO CYCLE TIMER (2.8-second calm, majestic biological cycle)
         // -----------------------------------------------------------
-        const cycle = t % 2.0;
-        const isPhase1 = cycle < 0.4; // Phase 1: Power Stroke (0.0s to 0.4s)
+        const cycle = t % 2.8;
+        const isPhase1 = cycle < 0.8; // Phase 1: Gentle Power Stroke (0.0s to 0.8s)
 
         // -----------------------------------------------------------
-        // 2. BELL DEFORMATION (Asymmetrical Vortex Ring Contraction)
+        // 2. BELL DEFORMATION & GENTLE FORWARD GLIDE
         // -----------------------------------------------------------
         if (isPhase1) {
-          // Phase 1 (0.0s - 0.4s): Rapid bell contraction (Power stroke)
-          const p = cycle / 0.4; // 0 to 1
+          // Phase 1 (0.0s - 0.8s): Smooth, slow bell contraction (No sudden head bump)
+          const p = cycle / 0.8; // 0 to 1
           const contraction = Math.sin(p * Math.PI);
 
-          // Bell radius narrows (X and Z contract down to ~0.7x)
-          // Bell height elongates (Y expands slightly)
-          const scaleXZ = baseScale * (1.0 - 0.30 * contraction);
-          const scaleY = baseScale * (1.0 + 0.18 * contraction);
+          // Subtle bell respiration (prevents head-bumping lunges)
+          const scaleXZ = baseScale * (1.0 - 0.12 * contraction);
+          const scaleY = baseScale * (1.0 + 0.04 * contraction);
           jf.scale.set(scaleXZ, scaleY, scaleXZ);
 
-          // Phase 1 Velocity: Apply sharp burst of forward velocity along bell axis
+          // Phase 1 Velocity: Smooth, calm forward glide impulse
           const forward = forwardVec.clone().applyQuaternion(jf.quaternion);
-          const thrustMagnitude = Math.sin(p * Math.PI) * 0.022; // Controlled, slow & realistic
+          const thrustMagnitude = Math.sin(p * Math.PI) * 0.0065; // Soft, slow & natural
           velocity.addScaledVector(forward, thrustMagnitude * (delta * 60));
         } else {
-          // Phase 2 (0.4s - 2.0s): Recovery & Coasting
-          // Slowly lerp scale back to relaxed 1.0 (elastic rebound of jelly)
-          jf.scale.x += (baseScale - jf.scale.x) * (0.045 * (delta * 60));
-          jf.scale.y += (baseScale - jf.scale.y) * (0.045 * (delta * 60));
-          jf.scale.z += (baseScale - jf.scale.z) * (0.045 * (delta * 60));
+          // Phase 2 (0.8s - 2.8s): Silky Coasting & Elastic Bell Relaxation
+          jf.scale.x += (baseScale - jf.scale.x) * (0.03 * (delta * 60));
+          jf.scale.y += (baseScale - jf.scale.y) * (0.03 * (delta * 60));
+          jf.scale.z += (baseScale - jf.scale.z) * (0.03 * (delta * 60));
 
-          // Apply water friction multiplier (0.95) to velocity so jellyfish coasts
-          const friction = Math.pow(0.95, delta * 60);
+          // Gentle water drag (0.965) preserves smooth coasting momentum
+          const friction = Math.pow(0.965, delta * 60);
           velocity.multiplyScalar(friction);
         }
 
         // Synchronize skeletal animation clip:
-        // Duration of clip is 4.29s; running at ~2.15x maps 4.29s to our 2.0s propulsion cycle!
+        // Relaxed, hypnotic tentacle flapping synchronized with the 2.8s cycle
         if (mixerRef.current) {
-          const animSpeed = isPhase1 ? 2.6 : 1.9;
+          const animSpeed = isPhase1 ? 1.5 : 1.1;
           mixerRef.current.update(delta * animSpeed);
         }
 
         // Secondary Dynamic Water Wave Undulation on Tentacles:
-        // Simulates water resistance, inertia, and fluid aquatic ripples down the tentacle chains
+        // Silky ocean current ripples flowing down the tentacle strands
         if (tentacleBonesRef.current.length > 0) {
-          const waveTime = t * 3.2;
+          const waveTime = t * 2.2;
           const bones = tentacleBonesRef.current;
           for (let i = 0; i < bones.length; i++) {
             const { bone, depth, index } = bones[i];
-            const phase = waveTime - depth * 0.42 + (index * 0.08);
-            const amplitude = 0.025 + depth * 0.007; // Outer tips wave more than base
+            const phase = waveTime - depth * 0.38 + (index * 0.08);
+            const amplitude = 0.018 + depth * 0.004;
 
             // Lateral fluid flex & water drag
             bone.rotation.z += Math.sin(phase) * amplitude;
-            bone.rotation.x += Math.cos(phase * 0.8) * (amplitude * 0.7);
+            bone.rotation.x += Math.cos(phase * 0.8) * (amplitude * 0.6);
           }
         }
 
@@ -293,7 +291,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({
         }
 
         // Smoothly interpolate current heading toward target heading (slow, majestic turn rate)
-        currentHeading.lerp(targetHeading, 0.025 * (delta * 60));
+        currentHeading.lerp(targetHeading, 0.018 * (delta * 60));
         currentHeading.normalize();
 
         // -----------------------------------------------------------
@@ -303,12 +301,12 @@ export const Scene3D: React.FC<Scene3DProps> = ({
 
         // Add subtle natural water roll into turns
         const rollAxis = currentHeading.clone().normalize();
-        const rollAngle = Math.sin(t * 0.45) * 0.1;
+        const rollAngle = Math.sin(t * 0.4) * 0.08;
         const rollQuat = new THREE.Quaternion().setFromAxisAngle(rollAxis, rollAngle);
         targetQuat.multiply(rollQuat);
 
         // Slerp orientation smoothly (majestic 3D banking)
-        jf.quaternion.slerp(targetQuat, 0.028 * (delta * 60));
+        jf.quaternion.slerp(targetQuat, 0.02 * (delta * 60));
 
         // -----------------------------------------------------------
         // 5. TRANSLATION & ABSOLUTE BOUNDARY CONFINEMENT

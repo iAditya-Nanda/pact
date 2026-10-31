@@ -56,7 +56,7 @@ export async function GET(request: Request) {
       workspace?.isLiveGoogleData
     );
 
-    let isLiveGoogleData = hasAuthorizedGoogle;
+    let isLiveGoogleData = false;
     let isDevBypass = false;
     let disabledApis: string[] = [];
     let authError: string | null = null;
@@ -69,9 +69,9 @@ export async function GET(request: Request) {
         if (liveData.authError) {
           authError = liveData.errorMessage || "Google access token expired or revoked.";
           tokenNeedsRefresh = true;
-          // Resilient Stale-While-Revalidate: Keep connection intact with verified cached data
-          isLiveGoogleData = hasAuthorizedGoogle;
+          isLiveGoogleData = false;
         } else {
+          isLiveGoogleData = true;
           // Merge Live Real Gmail Metrics
           workspace.metrics.unreadEmails = liveData.gmail.unreadCount;
           workspace.metrics.emailsThisMonth = liveData.gmail.thisMonthCount;

@@ -65,6 +65,13 @@ export default function DashboardPage() {
   // Spotlight 1-minute AI Executive Pitch Tour
   const [isTourOpen, setIsTourOpen] = useState(false);
 
+  // Auth Guard: Require an authenticated session; redirect to /login if not signed in
+  useEffect(() => {
+    if (mounted && !isLoading && !user) {
+      router.push("/login");
+    }
+  }, [mounted, isLoading, user, router]);
+
   useEffect(() => {
     setMounted(true);
     if (typeof window !== "undefined") {
@@ -149,15 +156,14 @@ export default function DashboardPage() {
 
   const activeUser = user || workspace?.user || localCache;
 
-  // Dynamic user data (prioritizes real backend synced profile)
-  const displayName = activeUser?.fullName || workspace?.user?.fullName || "Aditya Nanda";
-  const displayEmail = activeUser?.email || workspace?.user?.email || "adityananda.dev@gmail.com";
-  const displayAvatar = activeUser?.avatarUrl || workspace?.user?.avatarUrl || "";
-  const displayRole = activeUser?.role || workspace?.user?.role || "Lead Architect";
-  const displayAge = activeUser?.age || workspace?.user?.age || 24;
+  // Dynamic user data (prioritizes real authenticated Google user profile)
+  const displayName = activeUser?.fullName || activeUser?.email?.split("@")[0] || "Executive User";
+  const displayEmail = activeUser?.email || "";
+  const displayAvatar = activeUser?.avatarUrl || "";
+  const displayRole = activeUser?.role || "Lead Architect";
+  const displayAge = activeUser?.age || 24;
   const displayPreference =
     activeUser?.schedulePreference ||
-    workspace?.user?.schedulePreference ||
     "Avoid meetings before 10:00 AM";
 
   // Initials for avatar fallback
@@ -699,7 +705,7 @@ export default function DashboardPage() {
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  if (!mounted || isLoading || (isCheckingWorkspace && !workspace)) {
+  if (!mounted || isLoading || !user || (isCheckingWorkspace && !workspace)) {
     return <DashboardSkeleton />;
   }
 

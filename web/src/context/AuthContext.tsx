@@ -96,28 +96,11 @@ async function syncProfileToBackend(profile: UserProfile) {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  // Initialize immediately from localStorage for zero-latency session recovery
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("pact_auth_user");
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {
-          return null;
-        }
-      }
-    }
-    return null;
-  });
+  // User state — starts null, only set once Firebase confirms the session
+  const [user, setUser] = useState<UserProfile | null>(null);
 
-  const [isLoading, setIsLoading] = useState<boolean>(() => {
-    // If session exists in cache, loading is false immediately
-    if (typeof window !== "undefined") {
-      return !localStorage.getItem("pact_auth_user");
-    }
-    return true;
-  });
+  // Loading starts true — we must wait for Firebase to confirm auth state
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const router = useRouter();
 
@@ -138,9 +121,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const profile: UserProfile = {
           id: firebaseUser.uid,
-          email: firebaseUser.email || "adityananda.dev@gmail.com",
+          email: firebaseUser.email || "",
           fullName:
-            firebaseUser.displayName || existing.fullName || "Aditya Nanda",
+            firebaseUser.displayName || existing.fullName || (firebaseUser.email ? firebaseUser.email.split("@")[0] : "Executive User"),
           avatarUrl: firebaseUser.photoURL || existing.avatarUrl || "",
           role: existing.role || "Lead Architect",
           age: existing.age || 24,
@@ -162,24 +145,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         syncProfileToBackend(profile);
         setIsLoading(false);
       } else {
-        // Check if backend database has verified user session from users.json
-        fetch("/api/user/profile")
-          .then((res) => (res.ok ? res.json() : null))
-          .then((data) => {
-            if (data?.user) {
-              setUser((prev) => prev || data.user);
-              if (typeof window !== "undefined") {
-                if (!localStorage.getItem("pact_auth_user")) {
-                  localStorage.setItem("pact_auth_user", JSON.stringify(data.user));
-                }
-                if (data.user.googleAccessToken && !localStorage.getItem("pact_google_access_token")) {
-                  localStorage.setItem("pact_google_access_token", data.user.googleAccessToken);
-                }
-              }
-            }
-          })
-          .catch(() => {})
-          .finally(() => setIsLoading(false));
+        // Firebase confirms no authenticated user — clear all cached session data
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("pact_auth_user");
+          localStorage.removeItem("pact_google_access_token");
+        }
+        setUser(null);
+        setIsLoading(false);
       }
     });
 
@@ -189,6 +161,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const loginWithGoogle = async () => {
     setIsLoading(true);
     try {
+      // Configure Google provider to ALWAYS force account selection and consent screen
+      googleProvider.setCustomParameters({
+        prompt: "select_account consent",
+        access_type: "offline",
+      });
+
       // 1. Direct Google Sign In via Firebase popup
       const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -196,6 +174,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (token && typeof window !== "undefined") {
         localStorage.setItem("pact_google_access_token", token);
+        // Sync token immediately to server workspace overview so live Google data connects
+        try {
+          await fetch("/api/workspace/overview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ googleAccessToken: token }),
+          });
+        } catch (e) {
+          console.warn("Failed to sync token to workspace overview:", e);
+        }
       }
 
       const fbUser = result.user;
@@ -212,8 +200,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const profile: UserProfile = {
         id: fbUser.uid,
-        email: fbUser.email || "adityananda.dev@gmail.com",
-        fullName: fbUser.displayName || existing.fullName || "Aditya Nanda",
+        email: fbUser.email || "",
+        fullName:
+          fbUser.displayName || existing.fullName || (fbUser.email ? fbUser.email.split("@")[0] : "Executive User"),
         avatarUrl: fbUser.photoURL || existing.avatarUrl || "",
         role: existing.role || "Lead Architect",
         age: existing.age || 24,
@@ -281,19 +270,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }) => {
     setIsLoading(true);
     try {
+      googleProvider.setCustomParameters({
+        prompt: "select_account consent",
+        access_type: "offline",
+      });
+
       const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken;
 
       if (token && typeof window !== "undefined") {
         localStorage.setItem("pact_google_access_token", token);
+        try {
+          await fetch("/api/workspace/overview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ googleAccessToken: token }),
+          });
+        } catch (e) {
+          console.warn("Failed to sync token to workspace overview:", e);
+        }
       }
 
       const fbUser = result.user;
       const profile: UserProfile = {
         id: fbUser.uid,
-        email: fbUser.email || "adityananda.dev@gmail.com",
-        fullName: data.fullName || fbUser.displayName || "Aditya Nanda",
+        email: fbUser.email || "",
+        fullName:
+          data.fullName ||
+          fbUser.displayName ||
+          (fbUser.email ? fbUser.email.split("@")[0] : "Executive User"),
         avatarUrl: fbUser.photoURL || "",
         role: data.role || "Lead Architect",
         age: data.age || 24,

@@ -48,24 +48,10 @@ export async function GET(request: Request) {
       }
     }
 
-    // Default primary developer account fallback from backend users
-    const firstUser = Object.values(users)[0];
-    if (firstUser) {
-      return NextResponse.json({ success: true, user: firstUser });
-    }
-
-    return NextResponse.json({
-      success: true,
-      user: {
-        id: "usr_adityananda_dev",
-        email: "adityananda.dev@gmail.com",
-        fullName: "Aditya Nanda",
-        avatarUrl: "",
-        role: "Lead Architect",
-        age: 24,
-        schedulePreference: "Avoid meetings before 10:00 AM",
-      },
-    });
+    return NextResponse.json(
+      { success: false, user: null, message: "User not found" },
+      { status: 404 }
+    );
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

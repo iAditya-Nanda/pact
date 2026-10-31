@@ -21,18 +21,8 @@ export default function SignUpPage() {
   const router = useRouter();
   const pageRef = useRef<HTMLDivElement>(null);
 
-  // Background session verification and immediate entrance slide
+  // Smooth entrance slide from the right on mount
   useEffect(() => {
-    const stored =
-      typeof window !== "undefined"
-        ? localStorage.getItem("pact_auth_user")
-        : null;
-
-    if (user || stored) {
-      router.push("/dashboard");
-    }
-
-    // Smooth entrance slide from the right
     if (pageRef.current) {
       gsap.fromTo(
         pageRef.current,
@@ -40,7 +30,7 @@ export default function SignUpPage() {
         { x: "0%", opacity: 1, duration: 0.5, ease: "power3.out" }
       );
     }
-  }, [user, router]);
+  }, []);
 
   const navigateBackToHome = () => {
     if (pageRef.current) {

@@ -15,18 +15,8 @@ export default function LoginPage() {
   const router = useRouter();
   const pageRef = useRef<HTMLDivElement>(null);
 
-  // Background session verification and immediate entrance slide
+  // Smooth entrance slide from the right on mount
   useEffect(() => {
-    const stored =
-      typeof window !== "undefined"
-        ? localStorage.getItem("pact_auth_user")
-        : null;
-
-    if (user || stored) {
-      router.push("/dashboard");
-    }
-
-    // Smooth entrance slide from the right
     if (pageRef.current) {
       gsap.fromTo(
         pageRef.current,
@@ -34,7 +24,7 @@ export default function LoginPage() {
         { x: "0%", opacity: 1, duration: 0.5, ease: "power3.out" }
       );
     }
-  }, [user, router]);
+  }, []);
 
   const navigateBackToHome = () => {
     if (pageRef.current) {
@@ -140,6 +130,37 @@ export default function LoginPage() {
               </div>
             )}
 
+            {user && (
+              <div className="space-y-3 mb-5">
+                <div className="p-3.5 rounded-2xl bg-[#0b57d0]/10 dark:bg-[#38bdf8]/10 border border-[#0b57d0]/25 dark:border-[#38bdf8]/25 text-left">
+                  <div className="text-3xs font-bold uppercase tracking-wider text-[#0b57d0] dark:text-[#38bdf8] mb-0.5">
+                    Signed In
+                  </div>
+                  <div className="text-sm font-bold text-[#1f1f1f] dark:text-white truncate">
+                    {user.fullName || "Executive User"}
+                  </div>
+                  <div className="text-xs text-[#747775] dark:text-[#c4c6cf] truncate">
+                    {user.email}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  className="w-full rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white py-3 font-semibold text-sm shadow-md transition-all active:scale-98 cursor-pointer"
+                >
+                  Continue to Dashboard
+                </button>
+
+                <div className="relative flex py-1 items-center">
+                  <div className="flex-grow border-t border-white/30 dark:border-white/10"></div>
+                  <span className="flex-shrink mx-3 text-3xs uppercase tracking-wider text-[#747775] dark:text-[#8e9099]">
+                    or choose another account
+                  </span>
+                  <div className="flex-grow border-t border-white/30 dark:border-white/10"></div>
+                </div>
+              </div>
+            )}
+
             {/* Google Sign In CTA */}
             <button
               onClick={handleSignIn}
@@ -169,7 +190,11 @@ export default function LoginPage() {
                 </svg>
               )}
               <span>
-                {isSubmitting ? "Connecting to Google..." : "Continue with Google"}
+                {isSubmitting
+                  ? "Connecting to Google..."
+                  : user
+                  ? "Select Different Google Account"
+                  : "Continue with Google"}
               </span>
             </button>
 

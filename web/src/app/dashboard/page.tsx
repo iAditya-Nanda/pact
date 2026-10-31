@@ -751,18 +751,14 @@ export default function DashboardPage() {
 
         {/* Right Controls: AI Pitch Tour Button, Theme Switcher & Sign Out */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* AI Pitch Tour Trigger */}
+          {/* AI Tour Trigger */}
           <button
             id="tour-start-btn"
             onClick={() => setIsTourOpen(true)}
-            className="px-3.5 py-1.5 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] dark:bg-[#a8c7fa] dark:hover:bg-[#d3e3fd] text-white dark:text-[#041e49] text-xs font-semibold shadow-xs flex items-center gap-2 transition-all active:scale-95 cursor-pointer shrink-0 border border-transparent"
-            title="Start 1-Minute Executive Voice Tour & AI Pitch"
+            className="px-4 py-1.5 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] dark:bg-[#a8c7fa] dark:hover:bg-[#d3e3fd] text-white dark:text-[#041e49] text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer shrink-0 border border-transparent"
+            title="Start AI Tour"
           >
-            <Sparkles className="w-3.5 h-3.5 shrink-0 text-white dark:text-[#041e49]" />
-            <span className="font-semibold tracking-tight">AI Pitch Tour</span>
-            <span className="hidden sm:inline px-1.5 py-0.5 rounded-full bg-white/20 dark:bg-[#00325b]/20 text-3xs font-bold uppercase tracking-wider">
-              1m
-            </span>
+            AI Tour
           </button>
 
           {/* Top Theme Toggle Button */}

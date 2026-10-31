@@ -121,9 +121,116 @@ CREATE INDEX IF NOT EXISTS idx_sec_events_user ON security_events(user_id);
 
 
 def init_database(manager: DatabaseManager = db_manager) -> None:
-    """Initialize all core tables and indices."""
+    """Initialize all core tables and indices, and sync live workspace data."""
     with manager.get_connection() as conn:
         conn.executescript(SCHEMA_SQL)
+    seed_mock_data(manager)
+    sync_workspace_data(manager)
+
+
+def sync_workspace_data(manager: DatabaseManager = db_manager) -> None:
+    """
+    Synchronizes real Google Workspace data from web/.data/workspace.json directly into SQLite,
+    ensuring all AI tool invocations operate on real live user messages, events, and tasks.
+    """
+    import json
+    from pathlib import Path
+
+    workspace_candidates = [
+        Path(__file__).resolve().parent.parent.parent / "web" / ".data" / "workspace.json",
+        Path(__file__).resolve().parent.parent.parent / ".data" / "workspace.json",
+    ]
+
+    workspace_file = None
+    for cand in workspace_candidates:
+        if cand.exists():
+            workspace_file = cand
+            break
+
+    if not workspace_file:
+        return
+
+    try:
+        data = json.loads(workspace_file.read_text(encoding="utf-8"))
+        user_email = data.get("user", {}).get("email", "adityananda.dev@gmail.com")
+
+        with manager.get_connection() as conn:
+            # 1. Sync Emails from real Google Workspace
+            for em in data.get("emails", []):
+                eid = em.get("id")
+                sender = em.get("sender", "Unknown")
+                subject = em.get("subject", "No Subject")
+                snippet = em.get("snippet", "")
+                priority = str(em.get("priority", "NORMAL")).upper()
+                is_read = 1 if em.get("status") == "read" else 0
+                received_at = em.get("receivedAt", "")
+
+                conn.execute(
+                    """
+                    INSERT INTO mock_emails
+                    (email_id, sender, recipient, subject, body, priority, is_read, status, received_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'INBOX', ?)
+                    ON CONFLICT(email_id) DO UPDATE SET
+                        sender=excluded.sender,
+                        subject=excluded.subject,
+                        body=excluded.body,
+                        priority=excluded.priority,
+                        is_read=excluded.is_read,
+                        received_at=excluded.received_at;
+                    """,
+                    (eid, sender, user_email, subject, snippet, priority, is_read, received_at),
+                )
+
+            # 2. Sync Calendar Events
+            for evt in data.get("calendarEvents", []):
+                ev_id = evt.get("id")
+                title = evt.get("title", "Event")
+                desc = evt.get("description", "")
+                start_time = evt.get("startTime", "10:00 AM")
+                end_time = evt.get("endTime", "11:00 AM")
+                status = str(evt.get("status", "CONFIRMED")).upper()
+
+                conn.execute(
+                    """
+                    INSERT INTO mock_calendar_events
+                    (event_id, title, description, start_time, end_time, attendees_json, status)
+                    VALUES (?, ?, ?, ?, ?, '[]', ?)
+                    ON CONFLICT(event_id) DO UPDATE SET
+                        title=excluded.title,
+                        description=excluded.description,
+                        start_time=excluded.start_time,
+                        end_time=excluded.end_time,
+                        status=excluded.status;
+                    """,
+                    (ev_id, title, desc, start_time, end_time, status),
+                )
+
+            # 3. Sync Tasks
+            for tsk in data.get("tasks", []):
+                t_id = tsk.get("id")
+                t_title = tsk.get("title", "Task")
+                t_desc = tsk.get("description", "")
+                due = tsk.get("dueDate", "Today")
+                priority = str(tsk.get("priority", "MEDIUM")).upper()
+                status = "COMPLETED" if tsk.get("status") == "completed" else "PENDING"
+
+                conn.execute(
+                    """
+                    INSERT INTO mock_tasks
+                    (task_id, title, description, due_date, priority, status)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(task_id) DO UPDATE SET
+                        title=excluded.title,
+                        description=excluded.description,
+                        due_date=excluded.due_date,
+                        priority=excluded.priority,
+                        status=excluded.status;
+                    """,
+                    (t_id, t_title, t_desc, due, priority, status),
+                )
+    except Exception as e:
+        print(f"Warning: Failed to sync workspace.json to SQLite: {e}")
+
 
 
 def seed_mock_data(manager: DatabaseManager = db_manager) -> None:

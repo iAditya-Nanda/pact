@@ -158,7 +158,7 @@ export async function POST(request: Request) {
     // Attempt delegating to Python FastAPI LangGraph Gateway on port 8000
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const agentRes = await fetch(`${AGENT_BACKEND_URL}/api/chat`, {
         method: "POST",
@@ -176,6 +176,7 @@ export async function POST(request: Request) {
         const agentData = await agentRes.json();
         backendUsed = true;
         executionPlan = agentData.plan;
+        updatedWorkspace = readWorkspace();
 
         if (agentData.status === "SUSPENDED_APPROVAL" && agentData.pending_approval) {
           hitlApproval = agentData.pending_approval;

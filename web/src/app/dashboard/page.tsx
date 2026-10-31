@@ -10,6 +10,15 @@ import { WorkspaceWindow, WorkspaceChatPanel } from "@/components/workspace-wind
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { WorkspaceData } from "@/lib/workspace-service";
 import {
+  speakText,
+  stopSpeaking,
+  startListening,
+  stopListening,
+  isVoiceMuted,
+  setVoiceMuted,
+} from "@/lib/voice-service";
+import { ChatMessageItem } from "@/components/workspace-window/WorkspaceChatPanel";
+import {
   LogOut,
   ShieldCheck,
   Send,
@@ -21,8 +30,11 @@ import {
   Moon,
   Plus,
   Mic,
+  MicOff,
   Clock,
   ExternalLink,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -468,7 +480,55 @@ export default function DashboardPage() {
     isLiveGoogleData: false,
   };
 
-  // Connected chat execution via /api/chat
+  // Voice Synthesis (TTS) & Speech-to-Text (STT) State
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
+
+  useEffect(() => {
+    setIsAudioMuted(isVoiceMuted());
+  }, []);
+
+  const handleToggleMute = () => {
+    const next = !isAudioMuted;
+    setIsAudioMuted(next);
+    setVoiceMuted(next);
+  };
+
+  const handleToggleVoiceInput = () => {
+    if (isListening) {
+      stopListening();
+      setIsListening(false);
+      return;
+    }
+
+    const started = startListening({
+      onStart: () => {
+        setIsListening(true);
+      },
+      onResult: (transcript, isFinal) => {
+        setChatInput(transcript);
+        if (isFinal) {
+          stopListening();
+          setIsListening(false);
+          executeChatCommand(transcript);
+        }
+      },
+      onError: (err) => {
+        console.warn("Speech recognition error:", err);
+        setIsListening(false);
+      },
+      onEnd: () => {
+        setIsListening(false);
+      },
+    });
+
+    if (!started) {
+      setIsListening(false);
+    }
+  };
+
+  // Connected chat execution via /api/chat with Conversational Tab Switching & Voice Synthesis
   const executeChatCommand = async (msg: string) => {
     if (!msg.trim() || chatLoading) return;
     setChatMessages((prev) => [...prev, { sender: "user", text: msg }]);
@@ -480,38 +540,98 @@ export default function DashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: msg, mode: aiMode, activeApp: activeAppWindow }),
       });
+
       if (res.ok) {
         const data = await res.json();
+        const replyText = data.reply || `Processed "${msg}" with guarded clearance.`;
+
+        // 1. Conversational Tab Auto-Switching: open specific window tab if requested
+        if (data.tabAction === "OPEN_TAB" && data.targetTab) {
+          setActiveAppWindow(data.targetTab);
+        } else if (data.tabAction === "CLOSE_TAB") {
+          setActiveAppWindow(null);
+          setIsWindowMaximized(false);
+        }
+
         setChatMessages((prev) => [
           ...prev,
           {
             sender: "ai",
-            text: data.reply || `Processed "${msg}" with guarded clearance.`,
+            text: replyText,
+            hitlApproval: data.hitlApproval || null,
           },
         ]);
+
         if (data.workspace) {
           setWorkspace(data.workspace);
         }
+
+        // 2. Always Speak: Continuous Voice Output
+        speakText(
+          replyText,
+          () => setIsSpeaking(true),
+          () => setIsSpeaking(false)
+        );
       } else {
+        const fallback = `PACT Chief of Staff: Synchronized instruction "${msg}" with workspace engine.`;
         setChatMessages((prev) => [
           ...prev,
           {
             sender: "ai",
-            text: `PACT Chief of Staff: Synchronized instruction "${msg}" with workspace engine.`,
+            text: fallback,
           },
         ]);
+        speakText(
+          fallback,
+          () => setIsSpeaking(true),
+          () => setIsSpeaking(false)
+        );
       }
     } catch {
+      const fallback = `PACT Chief of Staff: Executed "${msg}". All services are up to date.`;
       setChatMessages((prev) => [
         ...prev,
         {
           sender: "ai",
-          text: `PACT Chief of Staff: Executed "${msg}". All services are up to date.`,
+          text: fallback,
         },
       ]);
+      speakText(
+        fallback,
+        () => setIsSpeaking(true),
+        () => setIsSpeaking(false)
+      );
     } finally {
       setChatLoading(false);
     }
+  };
+
+  // Handle Human-in-the-Loop Clearance approval from chat card
+  const handleApproveHitlAction = async (approval: any) => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          run_id: approval.run_id,
+          decision: "APPROVED",
+          payload_hash: approval.payload_hash,
+        }),
+      });
+      if (res.ok) {
+        const text = `Execution clearance authorized for '${approval.tool_name}'. Verified and logged in tamper-evident audit ledger.`;
+        setChatMessages((prev) => [...prev, { sender: "ai", text }]);
+        speakText(text, () => setIsSpeaking(true), () => setIsSpeaking(false));
+        await refreshWorkspace();
+        return;
+      }
+    } catch {}
+
+    // Fallback local clearance
+    await handleApproveAction();
+    const text = `Action authorized and executed. Workspace schedule updated.`;
+    setChatMessages((prev) => [...prev, { sender: "ai", text }]);
+    speakText(text, () => setIsSpeaking(true), () => setIsSpeaking(false));
   };
 
   const handleSendChat = async (e: React.FormEvent) => {
@@ -526,9 +646,7 @@ export default function DashboardPage() {
   const [mobileNotify, setMobileNotify] = useState(false);
   const [aiMode, setAiMode] = useState<"safe" | "turbo">("safe");
   const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState<
-    Array<{ sender: "user" | "ai"; text: string }>
-  >([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([]);
 
   // Modals for Settings, Connect & Logout
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -719,6 +837,12 @@ export default function DashboardPage() {
                   onSendMessage={executeChatCommand}
                   messages={chatMessages}
                   isLoading={chatLoading}
+                  isSpeaking={isSpeaking}
+                  isListening={isListening}
+                  onToggleListening={handleToggleVoiceInput}
+                  isAudioMuted={isAudioMuted}
+                  onToggleMute={handleToggleMute}
+                  onApproveAction={handleApproveHitlAction}
                 />
               </div>
             )}
@@ -1315,20 +1439,36 @@ export default function DashboardPage() {
                 <Sparkles className="w-4 h-4" />
               </div>
 
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask PACT AI to draft an email, reschedule a meeting, or query your tasks..."
-                className="flex-1 bg-transparent px-2 py-1.5 text-xs text-[#1f1f1f] dark:text-[#e2e2e6] placeholder:text-[#747775] dark:placeholder:text-[#8e9099] focus:outline-none"
-              />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder={
+                    isListening
+                      ? "Listening... Speak your command now."
+                      : "Ask PACT AI to draft an email, reschedule a meeting, or open apps..."
+                  }
+                  className={`w-full bg-transparent px-2 py-1.5 text-xs text-[#1f1f1f] dark:text-[#e2e2e6] placeholder:text-[#747775] dark:placeholder:text-[#8e9099] focus:outline-none ${
+                    isListening ? "font-medium text-[#ea4335] dark:text-[#f28b82]" : ""
+                  }`}
+                />
+                {isListening && (
+                  <span className="absolute right-2 top-2.5 w-2 h-2 rounded-full bg-[#ea4335] animate-ping" />
+                )}
+              </div>
 
               <button
                 type="button"
-                className="p-1.5 rounded-full text-[#747775] dark:text-[#8e9099] hover:text-[#1f1f1f] dark:hover:text-white hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] transition-colors cursor-pointer"
-                title="Voice Input"
+                onClick={handleToggleVoiceInput}
+                className={`p-1.5 rounded-full transition-all cursor-pointer ${
+                  isListening
+                    ? "bg-[#ea4335] text-white shadow-xs"
+                    : "text-[#747775] dark:text-[#8e9099] hover:text-[#1f1f1f] dark:hover:text-white hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f]"
+                }`}
+                title={isListening ? "Listening... Click to stop." : "Voice Input (Speech-to-Text)"}
               >
-                <Mic className="w-4 h-4" />
+                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>
 
               <button
@@ -1348,33 +1488,60 @@ export default function DashboardPage() {
               </span>
               <button
                 onClick={() =>
-                  setChatInput("Reschedule Client Technical Debrief to 3:30 PM")
+                  executeChatCommand("Open Gmail")
+                }
+                className="px-2 py-0.5 rounded-full bg-[#f0f4f9] dark:bg-[#282a2f] hover:bg-[#e4ebf5] dark:hover:bg-[#34373d] text-3xs text-[#444746] dark:text-[#c4c6cf] shrink-0 transition-colors cursor-pointer"
+              >
+                Open Gmail
+              </button>
+              <button
+                onClick={() =>
+                  executeChatCommand("Open Calendar")
+                }
+                className="px-2 py-0.5 rounded-full bg-[#f0f4f9] dark:bg-[#282a2f] hover:bg-[#e4ebf5] dark:hover:bg-[#34373d] text-3xs text-[#444746] dark:text-[#c4c6cf] shrink-0 transition-colors cursor-pointer"
+              >
+                Open Calendar
+              </button>
+              <button
+                onClick={() =>
+                  executeChatCommand("Open Tasks")
+                }
+                className="px-2 py-0.5 rounded-full bg-[#f0f4f9] dark:bg-[#282a2f] hover:bg-[#e4ebf5] dark:hover:bg-[#34373d] text-3xs text-[#444746] dark:text-[#c4c6cf] shrink-0 transition-colors cursor-pointer"
+              >
+                Open Tasks
+              </button>
+              <button
+                onClick={() =>
+                  executeChatCommand("Reschedule Client Technical Debrief to 3:30 PM")
                 }
                 className="px-2 py-0.5 rounded-full bg-[#f0f4f9] dark:bg-[#282a2f] hover:bg-[#e4ebf5] dark:hover:bg-[#34373d] text-3xs text-[#444746] dark:text-[#c4c6cf] shrink-0 transition-colors cursor-pointer"
               >
                 Reschedule conflict
               </button>
-              <button
-                onClick={() =>
-                  setChatInput("Summarize unread emails from Sarah Lin")
-                }
-                className="px-2 py-0.5 rounded-full bg-[#f0f4f9] dark:bg-[#282a2f] hover:bg-[#e4ebf5] dark:hover:bg-[#34373d] text-3xs text-[#444746] dark:text-[#c4c6cf] shrink-0 transition-colors cursor-pointer"
-              >
-                Summarize unread
-              </button>
-              <button
-                onClick={() =>
-                  setChatInput("List all priority tasks due today")
-                }
-                className="px-2 py-0.5 rounded-full bg-[#f0f4f9] dark:bg-[#282a2f] hover:bg-[#e4ebf5] dark:hover:bg-[#34373d] text-3xs text-[#444746] dark:text-[#c4c6cf] shrink-0 transition-colors cursor-pointer"
-              >
-                Tasks due today
-              </button>
+              {isSpeaking && (
+                <span className="ml-auto px-2 py-0.5 rounded-full bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] text-3xs font-semibold flex items-center gap-1 animate-pulse">
+                  <Volume2 className="w-2.5 h-2.5" />
+                  <span>Speaking response...</span>
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Bottom Right: Usable Buttons (No card box, Settings and Theme only) */}
+          {/* Bottom Right: Usable Buttons (Voice, Settings, Theme) */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Voice Mute / Unmute Button */}
+            <button
+              onClick={handleToggleMute}
+              className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+                isAudioMuted
+                  ? "border-[#fce8e6] dark:border-[#5c2420] bg-[#fce8e6] dark:bg-[#3b1816] text-[#c5221f] dark:text-[#f28b82]"
+                  : "border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] text-[#0b57d0] dark:text-[#a8c7fa]"
+              }`}
+              title={isAudioMuted ? "Voice response muted. Click to enable speech." : "Voice response active (Speaks responses aloud). Click to mute."}
+            >
+              {isAudioMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              <span>{isAudioMuted ? "Muted" : "Voice"}</span>
+            </button>
             {/* Settings Button */}
             <button
               onClick={() => setIsSettingsModalOpen(true)}

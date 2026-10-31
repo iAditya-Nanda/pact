@@ -5,13 +5,30 @@ import {
   Sparkles,
   Send,
   Mic,
+  MicOff,
   ShieldCheck,
   Zap,
   MessageSquare,
   Bot,
   User,
   ArrowRight,
+  Volume2,
+  VolumeX,
+  CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
+
+export interface ChatMessageItem {
+  sender: "user" | "ai";
+  text: string;
+  hitlApproval?: {
+    approval_id?: string;
+    tool_name?: string;
+    summary?: string;
+    payload_hash?: string;
+    payload?: any;
+  } | null;
+}
 
 interface WorkspaceChatPanelProps {
   activeApp: "gmail" | "calendar" | "tasks";
@@ -19,8 +36,14 @@ interface WorkspaceChatPanelProps {
   aiMode: "safe" | "turbo";
   onSelectAiMode: (mode: "safe" | "turbo") => void;
   onSendMessage: (msg: string) => Promise<void>;
-  messages: Array<{ sender: "user" | "ai"; text: string }>;
+  messages: ChatMessageItem[];
   isLoading?: boolean;
+  isSpeaking?: boolean;
+  isListening?: boolean;
+  onToggleListening?: () => void;
+  isAudioMuted?: boolean;
+  onToggleMute?: () => void;
+  onApproveAction?: (approval: any) => Promise<void>;
 }
 
 export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
@@ -31,6 +54,12 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
   onSendMessage,
   messages,
   isLoading = false,
+  isSpeaking = false,
+  isListening = false,
+  onToggleListening,
+  isAudioMuted = false,
+  onToggleMute,
+  onApproveAction,
 }) => {
   const [input, setInput] = useState("");
 
@@ -84,8 +113,14 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
             <Sparkles className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-[#1f1f1f] dark:text-white truncate">
-              PACT AI Co-Pilot
+            <div className="text-xs font-bold text-[#1f1f1f] dark:text-white truncate flex items-center gap-1.5">
+              <span>PACT AI Co-Pilot</span>
+              {isSpeaking && (
+                <span className="px-1.5 py-0.2 rounded-full bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] text-3xs font-semibold flex items-center gap-1 animate-pulse">
+                  <Volume2 className="w-2.5 h-2.5 animate-spin" />
+                  <span>Speaking</span>
+                </span>
+              )}
             </div>
             <div className="text-3xs text-[#747775] dark:text-[#8e9099] flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#1e8e3e] animate-pulse" />
@@ -94,32 +129,48 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
           </div>
         </div>
 
-        {/* Mode Switcher */}
-        <div className="flex items-center p-0.5 rounded-xl bg-white dark:bg-[#16181d] border border-[#e0e3e7] dark:border-[#34373d] shrink-0">
-          <button
-            onClick={() => onSelectAiMode("safe")}
-            className={`px-2 py-0.5 rounded-lg text-3xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-              aiMode === "safe"
-                ? "bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] shadow-2xs"
-                : "text-[#747775] dark:text-[#8e9099]"
-            }`}
-            title="Safe Mode: Requires human clearance before execution"
-          >
-            <ShieldCheck className="w-2.5 h-2.5" />
-            <span>Safe</span>
-          </button>
-          <button
-            onClick={() => onSelectAiMode("turbo")}
-            className={`px-2 py-0.5 rounded-lg text-3xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-              aiMode === "turbo"
-                ? "bg-[#fff3e0] dark:bg-[#4a2800] text-[#e65100] dark:text-[#ffb77d] shadow-2xs"
-                : "text-[#747775] dark:text-[#8e9099]"
-            }`}
-            title="Turbo Mode: Autonomous execution"
-          >
-            <Zap className="w-2.5 h-2.5" />
-            <span>Turbo</span>
-          </button>
+        {/* Right Controls: Voice Toggle + Mode Switcher */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onToggleMute && (
+            <button
+              onClick={onToggleMute}
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                isAudioMuted
+                  ? "bg-[#fce8e6] dark:bg-[#3b1816] text-[#c5221f] dark:text-[#f28b82] border-[#fce8e6] dark:border-[#5c2420]"
+                  : "bg-white dark:bg-[#16181d] text-[#0b57d0] dark:text-[#a8c7fa] border-[#e0e3e7] dark:border-[#34373d]"
+              }`}
+              title={isAudioMuted ? "Voice response muted. Click to enable speech." : "Voice response active (Speaks responses aloud). Click to mute."}
+            >
+              {isAudioMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            </button>
+          )}
+
+          <div className="flex items-center p-0.5 rounded-xl bg-white dark:bg-[#16181d] border border-[#e0e3e7] dark:border-[#34373d]">
+            <button
+              onClick={() => onSelectAiMode("safe")}
+              className={`px-2 py-0.5 rounded-lg text-3xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                aiMode === "safe"
+                  ? "bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] shadow-2xs"
+                  : "text-[#747775] dark:text-[#8e9099]"
+              }`}
+              title="Safe Mode: Requires human clearance before execution"
+            >
+              <ShieldCheck className="w-2.5 h-2.5" />
+              <span>Safe</span>
+            </button>
+            <button
+              onClick={() => onSelectAiMode("turbo")}
+              className={`px-2 py-0.5 rounded-lg text-3xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                aiMode === "turbo"
+                  ? "bg-[#fff3e0] dark:bg-[#4a2800] text-[#e65100] dark:text-[#ffb77d] shadow-2xs"
+                  : "text-[#747775] dark:text-[#8e9099]"
+              }`}
+              title="Turbo Mode: Autonomous execution"
+            >
+              <Zap className="w-2.5 h-2.5" />
+              <span>Turbo</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -134,7 +185,7 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
             </span>
           </div>
           <p className="text-xs text-[#444746] dark:text-[#c4c6cf] leading-relaxed">
-            I am coordinating your {appNameFormatted} in real time. Instruct me to draft emails,
+            I am coordinating your {appNameFormatted} in real time. Instruct me by voice or text to draft emails,
             resolve schedule overlaps, or automate your tasks.
           </p>
         </div>
@@ -143,29 +194,64 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
         {messages.map((m, idx) => (
           <div
             key={idx}
-            className={`flex items-start gap-2.5 ${
-              m.sender === "user" ? "flex-row-reverse" : "flex-row"
+            className={`flex flex-col gap-1.5 ${
+              m.sender === "user" ? "items-end" : "items-start"
             }`}
           >
             <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-3xs font-bold ${
-                m.sender === "user"
-                  ? "bg-[#0b57d0] text-white"
-                  : "bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa]"
+              className={`flex items-start gap-2.5 max-w-[90%] ${
+                m.sender === "user" ? "flex-row-reverse" : "flex-row"
               }`}
             >
-              {m.sender === "user" ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+              <div
+                className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-3xs font-bold ${
+                  m.sender === "user"
+                    ? "bg-[#0b57d0] text-white"
+                    : "bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa]"
+                }`}
+              >
+                {m.sender === "user" ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+              </div>
+
+              <div
+                className={`p-3 rounded-2xl text-xs text-left leading-relaxed ${
+                  m.sender === "user"
+                    ? "bg-[#0b57d0] text-white rounded-tr-none shadow-2xs"
+                    : "bg-[#f0f4f9] dark:bg-[#282a2f] text-[#1f1f1f] dark:text-[#e2e2e6] rounded-tl-none border border-[#e0e3e7]/80 dark:border-[#34373d]"
+                }`}
+              >
+                {m.text}
+              </div>
             </div>
 
-            <div
-              className={`p-3 rounded-2xl text-xs max-w-[85%] text-left leading-relaxed ${
-                m.sender === "user"
-                  ? "bg-[#0b57d0] text-white rounded-tr-none shadow-2xs"
-                  : "bg-[#f0f4f9] dark:bg-[#282a2f] text-[#1f1f1f] dark:text-[#e2e2e6] rounded-tl-none border border-[#e0e3e7]/80 dark:border-[#34373d]"
-              }`}
-            >
-              {m.text}
-            </div>
+            {/* Human-in-the-Loop Clearance Card if attached */}
+            {m.hitlApproval && (
+              <div className="ml-8 mr-2 p-3 rounded-2xl bg-[#fff8e1] dark:bg-[#2b2413] border border-[#fbc02d] text-left text-xs space-y-2 shadow-2xs">
+                <div className="flex items-center gap-1.5 font-bold text-[#b78103] dark:text-[#fbc02d]">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Human Clearance Required</span>
+                </div>
+                <p className="text-2xs text-[#5d4037] dark:text-[#ffe082]">
+                  {m.hitlApproval.summary || `Execute consequential action: ${m.hitlApproval.tool_name}`}
+                </p>
+                {m.hitlApproval.payload_hash && (
+                  <div className="text-3xs font-mono text-[#8d6e63] dark:text-[#d7ccc8] truncate">
+                    Hash: {m.hitlApproval.payload_hash.slice(0, 16)}...
+                  </div>
+                )}
+                {onApproveAction && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => onApproveAction(m.hitlApproval)}
+                      className="px-3 py-1 rounded-xl bg-[#0b57d0] hover:bg-[#0842a0] text-white text-2xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                    >
+                      <CheckCircle className="w-3 h-3" />
+                      <span>Authorize Execution</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
 
@@ -198,15 +284,43 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
           </div>
         </div>
 
-        {/* Input Bar */}
+        {/* Input Bar with Voice Mic + Send */}
         <form onSubmit={handleSend} className="flex items-center gap-2 pt-1">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={`Ask PACT about ${appNameFormatted}...`}
-            className="flex-1 px-3 py-2 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#16181d] text-xs text-[#1f1f1f] dark:text-white placeholder-[#747775] focus:outline-none focus:ring-1 focus:ring-[#0b57d0]"
-          />
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={
+                isListening
+                  ? "Listening... Speak your command now."
+                  : `Ask PACT about ${appNameFormatted}...`
+              }
+              className={`w-full px-3 py-2 rounded-xl border text-xs text-[#1f1f1f] dark:text-white placeholder-[#747775] focus:outline-none focus:ring-1 focus:ring-[#0b57d0] ${
+                isListening
+                  ? "border-[#ea4335] bg-[#fce8e6] dark:bg-[#3b1816] animate-pulse"
+                  : "border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#16181d]"
+              }`}
+            />
+            {isListening && (
+              <span className="absolute right-2.5 top-2.5 w-2 h-2 rounded-full bg-[#ea4335] animate-ping" />
+            )}
+          </div>
+
+          {onToggleListening && (
+            <button
+              type="button"
+              onClick={onToggleListening}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 border ${
+                isListening
+                  ? "bg-[#ea4335] text-white border-[#ea4335] shadow-xs"
+                  : "bg-white dark:bg-[#16181d] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] text-[#747775] dark:text-[#8e9099] border-[#e0e3e7] dark:border-[#34373d]"
+              }`}
+              title={isListening ? "Listening... Click to stop." : "Speak your instruction"}
+            >
+              {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+            </button>
+          )}
 
           <button
             type="submit"

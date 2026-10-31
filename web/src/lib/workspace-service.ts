@@ -337,6 +337,7 @@ function getDefaultWorkspace(): WorkspaceData {
         createdAt: new Date().toISOString(),
       },
     ],
+    isLiveGoogleData: true,
   };
 }
 

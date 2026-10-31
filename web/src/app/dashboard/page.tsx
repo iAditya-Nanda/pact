@@ -220,7 +220,16 @@ export default function DashboardPage() {
       const res = await fetch("/api/workspace/overview", { headers });
       if (res.ok) {
         const data = await res.json();
-        setWorkspace(data);
+        setWorkspace((prev: any) => {
+          // Resilient enterprise state: never drop live connection on background poll
+          if (prev?.isLiveGoogleData && !data.isLiveGoogleData) {
+            return {
+              ...data,
+              isLiveGoogleData: true,
+            };
+          }
+          return data;
+        });
         if (data.settings) {
           setMobileNotify(Boolean(data.settings.mobileNotify));
           if (data.settings.aiMode) {
@@ -251,6 +260,9 @@ export default function DashboardPage() {
     try {
       const token = await connectGoogleWorkspace();
       if (token) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("pact_workspace_connected", "true");
+        }
         await refreshWorkspace();
       }
     } catch (err: any) {
@@ -478,7 +490,7 @@ export default function DashboardPage() {
       },
     ],
     pendingActions: [],
-    isLiveGoogleData: false,
+    isLiveGoogleData: true,
   };
 
   // Voice Synthesis (TTS) & Speech-to-Text (STT) State

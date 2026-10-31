@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   X,
   CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { stopSpeaking } from "@/lib/voice-service";
 
@@ -90,9 +91,8 @@ interface TargetRect {
 
 /**
  * Intelligent positioning engine:
- * Evaluates candidate placements (preferred, opposite, lateral) and chooses
- * the placement that guarantees zero overlap with the target element while
- * fitting cleanly within viewport bounds.
+ * Evaluates candidate placements and guarantees strict clearance
+ * so the card never covers or intersects the target element.
  */
 function calculateNonOverlappingPosition(
   target: TargetRect,
@@ -102,13 +102,13 @@ function calculateNonOverlappingPosition(
   vw: number,
   vh: number
 ): { top: number; left: number } {
-  const margin = 16;
+  const clearance = 24; // Generous physical gap between card and target
   const padding = 16;
 
   // Build candidate placements order prioritizing preferred placement
   const order: Array<"top" | "bottom" | "left" | "right"> = [
     preferred,
-    preferred === "bottom" ? "top" : preferred === "top" ? "bottom" : preferred === "left" ? "right" : "left",
+    preferred === "top" ? "bottom" : preferred === "bottom" ? "top" : preferred === "left" ? "right" : "left",
     preferred === "left" || preferred === "right" ? "bottom" : "right",
     preferred === "left" || preferred === "right" ? "top" : "left",
   ];
@@ -118,27 +118,45 @@ function calculateNonOverlappingPosition(
     let left = 0;
 
     if (p === "bottom") {
-      top = target.top + target.height + margin;
+      top = target.top + target.height + clearance;
       left = target.left + (target.width - cardWidth) / 2;
     } else if (p === "top") {
-      top = target.top - cardHeight - margin;
+      // Position card strictly above target element
+      top = target.top - cardHeight - clearance;
       left = target.left + (target.width - cardWidth) / 2;
     } else if (p === "right") {
       top = target.top + (target.height - cardHeight) / 2;
-      left = target.left + target.width + margin;
+      left = target.left + target.width + clearance;
     } else if (p === "left") {
       top = target.top + (target.height - cardHeight) / 2;
-      left = target.left - cardWidth - margin;
+      left = target.left - cardWidth - clearance;
     }
 
     // Clamp inside viewport
     left = Math.max(padding, Math.min(left, vw - cardWidth - padding));
     top = Math.max(padding, Math.min(top, vh - cardHeight - padding));
 
-    // Test for overlap with target element (including small safety buffer)
+    // Hard anti-overlap enforcement for "top" placement:
+    // If top + cardHeight would touch target.top, push top strictly higher
+    if (p === "top") {
+      if (top + cardHeight > target.top - 16) {
+        top = target.top - cardHeight - 16;
+      }
+      top = Math.max(padding, top);
+    }
+
+    // Hard anti-overlap enforcement for "bottom" placement:
+    if (p === "bottom") {
+      if (top < target.top + target.height + 16) {
+        top = target.top + target.height + 16;
+      }
+      top = Math.min(vh - cardHeight - padding, top);
+    }
+
+    // Verify strict geometric non-overlap with target
     const cardRight = left + cardWidth;
     const cardBottom = top + cardHeight;
-    const targetBuffer = 4;
+    const targetBuffer = 6;
     const targetLeft = target.left - targetBuffer;
     const targetTop = target.top - targetBuffer;
     const targetRight = target.left + target.width + targetBuffer;
@@ -165,6 +183,12 @@ function calculateNonOverlappingPosition(
 
   const maxFree = Math.max(freeRight, freeLeft, freeBottom, freeTop);
 
+  if (maxFree === freeTop) {
+    return {
+      left: Math.max(padding, Math.min(target.left, vw - cardWidth - padding)),
+      top: Math.max(padding, target.top - cardHeight - 20),
+    };
+  }
   if (maxFree === freeRight) {
     return {
       left: Math.max(padding, vw - cardWidth - padding),
@@ -177,15 +201,9 @@ function calculateNonOverlappingPosition(
       top: Math.max(padding, Math.min(target.top + 20, vh - cardHeight - padding)),
     };
   }
-  if (maxFree === freeBottom) {
-    return {
-      left: Math.max(padding, Math.min(target.left, vw - cardWidth - padding)),
-      top: Math.max(padding, vh - cardHeight - padding),
-    };
-  }
   return {
     left: Math.max(padding, Math.min(target.left, vw - cardWidth - padding)),
-    top: padding,
+    top: Math.max(padding, vh - cardHeight - padding),
   };
 }
 
@@ -195,6 +213,10 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
+  const [cardHeight, setCardHeight] = useState(250);
+  const [secondsRemaining, setSecondsRemaining] = useState(10);
+  const [stepProgress, setStepProgress] = useState(0); // 0 to 100%
+  const [isPaused, setIsPaused] = useState(false);
   const tourCardRef = useRef<HTMLDivElement>(null);
 
   const step = TOUR_STEPS[currentStepIndex];
@@ -231,6 +253,16 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
     }
   }, [isOpen, step]);
 
+  // Dynamically measure actual DOM card height for precision clearance
+  useEffect(() => {
+    if (tourCardRef.current) {
+      const h = tourCardRef.current.offsetHeight;
+      if (h && Math.abs(h - cardHeight) > 4) {
+        setCardHeight(h);
+      }
+    }
+  }, [currentStepIndex, cardHeight]);
+
   useEffect(() => {
     if (!isOpen) {
       stopSpeaking();
@@ -247,6 +279,41 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
       window.removeEventListener("scroll", handleResize, true);
     };
   }, [isOpen, updateTargetRect]);
+
+  // 10-Second Auto-Advance Countdown per step ("make each for 10 seconds and then move further!")
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setSecondsRemaining(10);
+    setStepProgress(0);
+
+    const stepDuration = 10000; // 10 seconds per step
+    const intervalTick = 50; // Smooth 50ms progress update
+    let elapsed = 0;
+
+    const timer = setInterval(() => {
+      if (isPaused) return; // Pause timer on hover if user is inspecting
+
+      elapsed += intervalTick;
+      const progress = Math.min(100, (elapsed / stepDuration) * 100);
+      const remaining = Math.max(0, Math.ceil((stepDuration - elapsed) / 1000));
+
+      setStepProgress(progress);
+      setSecondsRemaining(remaining);
+
+      if (elapsed >= stepDuration) {
+        clearInterval(timer);
+        // Move to next step or close on final step
+        if (currentStepIndex < TOUR_STEPS.length - 1) {
+          setCurrentStepIndex((prev) => prev + 1);
+        } else {
+          handleClose();
+        }
+      }
+    }, intervalTick);
+
+    return () => clearInterval(timer);
+  }, [isOpen, currentStepIndex, isPaused]);
 
   // Keyboard navigation: Left/Right arrows and Escape key
   useEffect(() => {
@@ -290,9 +357,8 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
 
   if (!isOpen || !step) return null;
 
-  // Compute card position guaranteed not to overlap target
-  const cardWidth = 380;
-  const cardHeight = 220;
+  // Compute card position with guaranteed non-overlap
+  const cardWidth = 360;
   const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
 
@@ -306,8 +372,6 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
         vh
       )
     : { top: vh / 2 - cardHeight / 2, left: vw / 2 - cardWidth / 2 };
-
-  const progressPercent = ((currentStepIndex + 1) / TOUR_STEPS.length) * 100;
 
   return (
     <div className="fixed inset-0 z-99999 overflow-hidden select-none animate-in fade-in duration-200">
@@ -348,7 +412,7 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
         />
       </svg>
 
-      {/* 2. Clean Material Design 3 Focus Ring Around Target (Zero Cyberpunk, Zero Overlap) */}
+      {/* 2. Material Design 3 Focus Ring Around Target (Zero Cyberpunk, Zero Overlap) */}
       {targetRect && (
         <div
           style={{
@@ -362,22 +426,37 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
         />
       )}
 
-      {/* 3. Floating Spotlight Card (Clean M3 Enterprise Style from DESIGN.md) */}
+      {/* 3. Floating Spotlight Card (Compact M3 Enterprise Card with 10s Timer) */}
       <div
         ref={tourCardRef}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
         style={{
           top: `${cardTop}px`,
           left: `${cardLeft}px`,
           transition:
             "top 300ms cubic-bezier(0.2, 0, 0, 1), left 300ms cubic-bezier(0.2, 0, 0, 1)",
         }}
-        className="absolute w-[380px] max-w-[calc(100vw-32px)] bg-white/95 dark:bg-[#1d1f24]/95 border border-[#e0e3e7] dark:border-[#34373d] rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/60 backdrop-blur-md p-4.5 text-[#1f1f1f] dark:text-[#e2e2e6] pointer-events-auto"
+        className="absolute w-[360px] max-w-[calc(100vw-32px)] bg-white/95 dark:bg-[#1d1f24]/95 border border-[#e0e3e7] dark:border-[#34373d] rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/60 backdrop-blur-md p-3.5 text-[#1f1f1f] dark:text-[#e2e2e6] pointer-events-auto"
       >
-        {/* Header: Step Pill & Close */}
-        <div className="flex items-center justify-between gap-2 mb-2.5">
-          <span className="px-2.5 py-0.5 rounded-full bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] text-3xs font-semibold tracking-wide">
-            Step {currentStepIndex + 1} of {TOUR_STEPS.length}
-          </span>
+        {/* Header: Step Pill + 10s Timer Chip + Close Button */}
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] text-3xs font-semibold tracking-wide">
+              Step {currentStepIndex + 1} of {TOUR_STEPS.length}
+            </span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-3xs font-medium font-mono flex items-center gap-1 transition-colors ${
+                isPaused
+                  ? "bg-[#fff3e0] text-[#e65100] dark:bg-[#4a2800] dark:text-[#ffb77d]"
+                  : "bg-[#f0f4f9] dark:bg-[#282a2f] text-[#747775] dark:text-[#8e9099]"
+              }`}
+              title={isPaused ? "Timer paused while hovering" : "Auto-advancing in 10s"}
+            >
+              <Clock className="w-2.5 h-2.5" />
+              <span>{isPaused ? "Paused" : `${secondsRemaining}s`}</span>
+            </span>
+          </div>
 
           <button
             onClick={handleClose}
@@ -389,7 +468,7 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
         </div>
 
         {/* Title & Summary */}
-        <div className="space-y-1 mb-2.5">
+        <div className="space-y-0.5 mb-2">
           <h3 className="text-sm font-bold text-[#1f1f1f] dark:text-white tracking-tight leading-snug">
             {step.title}
           </h3>
@@ -399,15 +478,15 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
         </div>
 
         {/* Details Box */}
-        <div className="p-2.5 rounded-xl bg-[#f8fafd] dark:bg-[#282a2f] border border-[#e0e3e7]/80 dark:border-[#34373d] text-xs text-[#444746] dark:text-[#c4c6cf] leading-relaxed mb-3">
+        <div className="p-2 rounded-xl bg-[#f8fafd] dark:bg-[#282a2f] border border-[#e0e3e7]/80 dark:border-[#34373d] text-2xs text-[#444746] dark:text-[#c4c6cf] leading-relaxed mb-2.5">
           {step.details}
         </div>
 
-        {/* M3 Linear Progress Bar */}
-        <div className="w-full h-1 bg-[#e0e3e7] dark:bg-[#34373d] rounded-full overflow-hidden mb-3.5">
+        {/* 10-Second Step Progress Bar */}
+        <div className="w-full h-1 bg-[#e0e3e7] dark:bg-[#34373d] rounded-full overflow-hidden mb-3">
           <div
-            style={{ width: `${progressPercent}%` }}
-            className="h-full bg-[#0b57d0] dark:bg-[#a8c7fa] rounded-full transition-all duration-300"
+            style={{ width: `${stepProgress}%` }}
+            className="h-full bg-[#0b57d0] dark:bg-[#a8c7fa] rounded-full transition-all duration-75 ease-linear"
           />
         </div>
 
@@ -416,7 +495,7 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
           <button
             onClick={handlePrev}
             disabled={currentStepIndex === 0}
-            className="px-3 py-1.5 rounded-full border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] disabled:opacity-30 disabled:pointer-events-none text-xs font-semibold text-[#444746] dark:text-[#c4c6cf] flex items-center gap-1 transition-all cursor-pointer"
+            className="px-3 py-1 rounded-full border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] disabled:opacity-30 disabled:pointer-events-none text-xs font-semibold text-[#444746] dark:text-[#c4c6cf] flex items-center gap-1 transition-all cursor-pointer"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             <span>Back</span>

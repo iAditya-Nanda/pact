@@ -713,7 +713,7 @@ export default function DashboardPage() {
               P.A.C.T.
             </span>
             <span className="text-xs font-medium text-[#747775] dark:text-[#8e9099] hidden sm:inline">
-              - Proactive Agent for Coordinated Tasks
+              Executive OS
             </span>
           </div>
 
@@ -930,7 +930,7 @@ export default function DashboardPage() {
                       className="w-4.5 h-4.5 object-contain shrink-0"
                     />
                     <span className="text-xs font-bold text-[#1f1f1f] dark:text-white tracking-tight truncate">
-                      Gmail Insights &amp; Info
+                      Gmail
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-2xs font-medium shrink-0">
@@ -940,7 +940,7 @@ export default function DashboardPage() {
                       }`}
                     />
                     <span className="text-[#747775] dark:text-[#8e9099]">
-                      {workspace?.isLiveGoogleData ? "Gmail Live" : "Auth Required"}
+                      {workspace?.isLiveGoogleData ? "Live" : "Auth Required"}
                     </span>
                   </div>
                 </div>
@@ -1031,7 +1031,7 @@ export default function DashboardPage() {
                       className="w-4.5 h-4.5 object-contain shrink-0"
                     />
                     <span className="text-xs font-bold text-[#1f1f1f] dark:text-white tracking-tight truncate">
-                      Calendar Insights &amp; Info
+                      Calendar
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-2xs font-medium shrink-0">
@@ -1041,7 +1041,7 @@ export default function DashboardPage() {
                       }`}
                     />
                     <span className="text-[#747775] dark:text-[#8e9099]">
-                      {workspace?.isLiveGoogleData ? "Calendar Live" : "Auth Required"}
+                      {workspace?.isLiveGoogleData ? "Live" : "Auth Required"}
                     </span>
                   </div>
                 </div>
@@ -1132,7 +1132,7 @@ export default function DashboardPage() {
                       className="w-4.5 h-4.5 object-contain shrink-0"
                     />
                     <span className="text-xs font-bold text-[#1f1f1f] dark:text-white tracking-tight truncate">
-                      Tasks Insights &amp; Info
+                      Tasks
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-2xs font-medium shrink-0">
@@ -1142,7 +1142,7 @@ export default function DashboardPage() {
                       }`}
                     />
                     <span className="text-[#747775] dark:text-[#8e9099]">
-                      {workspace?.isLiveGoogleData ? "Tasks Live" : "Auth Required"}
+                      {workspace?.isLiveGoogleData ? "Live" : "Auth Required"}
                     </span>
                   </div>
                 </div>
@@ -1153,7 +1153,7 @@ export default function DashboardPage() {
                     {workspace?.isLiveGoogleData ? (workspace?.metrics?.activeTasks ?? 0) : "—"}
                   </div>
                   <div className="text-xs font-medium text-[#747775] dark:text-[#8e9099] text-center mt-1">
-                    {workspace?.isLiveGoogleData ? "Active tasks pending" : "Connect Google to load live queue"}
+                    {workspace?.isLiveGoogleData ? "Active deliverables" : "Connect Google to load live queue"}
                   </div>
                 </div>
 
@@ -1175,10 +1175,12 @@ export default function DashboardPage() {
                     {workspace?.isLiveGoogleData ? (
                       <>
                         <div className="text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] truncate">
-                          {workspace?.topAction?.title || "Top Task"}
+                          {workspace?.topAction?.title || "All tasks completed"}
                         </div>
                         <div className="text-2xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
-                          {workspace?.topAction?.description || "All tasks completed"}
+                          {workspace?.topAction?.description?.includes("No pending")
+                            ? "All deliverables up to date"
+                            : (workspace?.topAction?.description || "All deliverables up to date")}
                         </div>
                       </>
                     ) : (
@@ -1261,13 +1263,10 @@ export default function DashboardPage() {
                     </span>
                   </div>
 
-                  {/* Small Role & Age */}
+                  {/* Role Badge */}
                   <div className="flex items-center justify-start gap-2 mt-1.5 text-left">
-                    <span className="px-2 py-0.5 rounded-full bg-[#f0f4f9] dark:bg-[#004a77] border border-[#e0e3e7] dark:border-[#a8c7fa]/40 text-xs font-bold text-[#0b57d0] dark:text-[#a8c7fa]">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#e8f0fe] dark:bg-[#004a77] border border-[#d3e3fd] dark:border-[#a8c7fa]/40 text-xs font-semibold text-[#0b57d0] dark:text-[#a8c7fa]">
                       {displayRole}
-                    </span>
-                    <span className="text-xs font-medium text-[#444746] dark:text-[#c4c6cf]">
-                      Age {displayAge}
                     </span>
                   </div>
 

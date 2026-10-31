@@ -44,3 +44,9 @@ yarn-error.log*
 *.sqlite
 *.sqlite3
 *.db
+*.db-shm
+*.db-wal
+
+# Model Weights
+models/*.gguf
+*.gguf

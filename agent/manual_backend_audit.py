@@ -46,7 +46,7 @@ def run_audit():
     # -------------------------------------------------------------
     # 1. Local C++ Model Inference & Extraction
     # -------------------------------------------------------------
-    print("\n[Subsystem 1/10] Local C++ Model Inference (qwen2.5:3b via Ollama / llama.cpp)...")
+    print("\n[Subsystem 1/10] Local Pure C++ Model Inference (llama.cpp / Metal)...")
     t0 = time.perf_counter()
     intent = intent_service.extract_intent("Reschedule my 2 PM meeting with Bob to tomorrow at 3:30 PM")
     t_intent = round((time.perf_counter() - t0) * 1000, 2)

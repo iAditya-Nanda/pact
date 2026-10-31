@@ -2,8 +2,8 @@
 """
 Phase 2 Verification Script for PACT Agentic AI Subsystem.
 Validates:
-1. Connectivity to local C++ model runtime (Ollama / llama.cpp on localhost:11434).
-2. Live structured token generation using qwen2.5:3b with Pydantic JSON schema constraints.
+1. Connectivity to local pure C++ model runtime (llama.cpp with Metal GPU acceleration).
+2. Live structured token generation using qwen2.5-3b-instruct with Pydantic JSON schema constraints.
 3. Accurate intent classification and entity extraction into ParsedIntent.
 4. Dependency-aware DAG decomposition into an ExecutionPlan with risk tiers and idempotency keys.
 """
@@ -45,7 +45,7 @@ def main():
     # Step 1: Check Local C++ Runtime
     print_step("Step 1: Connecting to Local C++ Model Runtime")
     model_name = local_llm_client.config.tier_a_model
-    print(f"  Target Local Model: \033[1;33m{model_name}\033[0m (C++ llama.cpp via Ollama)")
+    print(f"  Target Local Model: \033[1;33m{model_name}\033[0m (Pure C++ in-process llama.cpp)")
 
     # Step 2: Live Intent Extraction
     print_step("Step 2: Performing Live Intent Extraction (Tier A)")

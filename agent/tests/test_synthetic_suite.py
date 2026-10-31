@@ -240,6 +240,12 @@ def test_synthetic_time_machine_rollback():
         decision=ApprovalStatus.APPROVED,
         payload_hash=pending["payload_hash"],
     )
+    while res_appr.get("status") == "SUSPENDED_APPROVAL":
+        res_appr = orchestrator.approve_and_resume(
+            run_id=run_id,
+            decision=ApprovalStatus.APPROVED,
+            payload_hash=res_appr["pending_approval"]["payload_hash"],
+        )
     assert res_appr["status"] in ["COMPLETED", "EXECUTING"]
     
     # Trigger 1-Click Rollback

@@ -62,18 +62,24 @@ export default function LandingPage() {
 
           {/* SECTION 1: HERO CANVAS */}
           <section className="min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-12 max-w-5xl mx-auto w-full pt-8 pb-16">
-            {/* Display Heading */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#1f1f1f] dark:text-white leading-[1.1] mb-6">
-              Autonomous Cross-App
-              <br />
-              <span className="text-[#0b57d0] dark:text-[#38bdf8]">
-                Executive Workflows
+            {/* Big Main Display Heading: P.A.C.T. */}
+            <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight leading-none mb-3">
+              <span className="bg-gradient-to-r from-[#0b57d0] via-[#1a73e8] to-[#38bdf8] bg-clip-text text-transparent dark:from-white dark:via-[#7dd3fc] dark:to-[#38bdf8]">
+                P.A.C.T.
               </span>
             </h1>
 
-            {/* Subtitle */}
+            {/* Full Form */}
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#1f1f1f] dark:text-white tracking-tight mb-4">
+              Proactive Agent for{" "}
+              <span className="text-[#0b57d0] dark:text-[#38bdf8]">
+                Coordinated Tasks
+              </span>
+            </h2>
+
+            {/* Subtitle / Core Executive Value */}
             <p className="text-base sm:text-lg text-[#444746] dark:text-[#c4c6cf] max-w-2xl font-normal leading-relaxed mb-10">
-              Deterministic coordination across Gmail, Google Calendar, and Tasks with verified tool execution, schedule defense, and guarded human clearance.
+              Autonomous cross-app executive operating system orchestrating Gmail, Google Calendar, and Tasks with verified tool execution, schedule defense, and guarded human clearance.
             </p>
 
             {/* Action Controls */}
@@ -258,7 +264,7 @@ export default function LandingPage() {
           <section className="py-20 px-4 sm:px-6 lg:px-12 max-w-4xl mx-auto w-full text-center">
             <div className="rounded-3xl bg-white/25 dark:bg-[#1d1f24]/25 backdrop-blur-2xl border border-white/50 dark:border-white/10 p-8 md:p-12 shadow-2xl">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-[#1f1f1f] dark:text-white mb-3">
-                Experience Autonomous Executive Computing
+                Experience Autonomous Executive Computing with P.A.C.T.
               </h2>
               <p className="text-xs sm:text-sm text-[#444746] dark:text-[#c4c6cf] max-w-md mx-auto leading-relaxed mb-7">
                 Connect your Google Workspace and orchestrate priority communication, focus defense, and task delivery.

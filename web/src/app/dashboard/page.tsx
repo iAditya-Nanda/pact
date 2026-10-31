@@ -23,7 +23,7 @@ import {
   LogOut,
   ShieldCheck,
   Send,
-  Sparkles,
+  MessageSquare,
   PhoneCall,
   Zap,
   Settings,
@@ -32,7 +32,6 @@ import {
   Plus,
   Mic,
   MicOff,
-  Clock,
   ExternalLink,
   Volume2,
   VolumeX,
@@ -159,25 +158,12 @@ export default function DashboardPage() {
     .toUpperCase()
     .slice(0, 2);
 
-  // Live Timer in IST with Seconds & Dynamic Greeting
-  const [istTime, setIstTime] = useState("");
+  // Dynamic Greeting based on Asia/Kolkata (IST)
   const [greeting, setGreeting] = useState("Good morning");
 
   useEffect(() => {
-    const updateTime = () => {
+    const updateGreeting = () => {
       const now = new Date();
-      // Format exact time in Asia/Kolkata (IST)
-      const options: Intl.DateTimeFormatOptions = {
-        timeZone: "Asia/Kolkata",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      };
-      const formatted = new Intl.DateTimeFormat("en-IN", options).format(now);
-      setIstTime(`${formatted} IST`);
-
-      // Determine greeting by IST hour
       const istHour = parseInt(
         new Intl.DateTimeFormat("en-IN", {
           timeZone: "Asia/Kolkata",
@@ -198,9 +184,7 @@ export default function DashboardPage() {
       }
     };
 
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
+    updateGreeting();
   }, []);
 
   // Dashboard action states
@@ -243,6 +227,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     refreshWorkspace();
+    const refreshInterval = setInterval(refreshWorkspace, 60000);
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const [manualToken, setManualToken] = useState("");
@@ -713,34 +699,27 @@ export default function DashboardPage() {
               P.A.C.T.
             </span>
             <span className="text-xs font-medium text-[#747775] dark:text-[#8e9099] hidden sm:inline">
-              Executive OS
+              - Proactive Agent for Coordinated Tasks
             </span>
           </div>
 
-          {/* Live Data Badge / Re-auth Trigger */}
+          {/* Live Data Badge */}
           {workspace?.isLiveGoogleData ? (
-            <div className="ml-2 hidden md:inline-flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-full bg-[#e6f4ea] dark:bg-[#0f5223] text-[#137333] dark:text-[#81c995] text-2xs font-bold border border-[#ceead6] dark:border-[#137333] inline-flex items-center gap-1.5">
+            <div className="ml-2 hidden md:inline-flex items-center">
+              <span className="px-2 py-0.5 rounded-full bg-[#e6f4ea] dark:bg-[#0f5223] text-[#137333] dark:text-[#81c995] text-3xs font-semibold border border-[#ceead6] dark:border-[#137333] inline-flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#1e8e3e] animate-pulse" />
                 <span>
                   {workspace?.isDevBypass
-                    ? "Google OAuth Connected (Dev Mode)"
+                    ? "Google OAuth Connected"
                     : "Live Google Workspace Connected"}
                 </span>
               </span>
-              <button
-                onClick={refreshWorkspace}
-                className="p-1 rounded-lg text-[#747775] hover:text-[#0b57d0] dark:hover:text-[#a8c7fa] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] transition-colors cursor-pointer"
-                title="Refresh Live Google Data"
-              >
-                <Clock className="w-3.5 h-3.5" />
-              </button>
             </div>
           ) : (
             <button
               onClick={handleConnectGoogleServices}
               disabled={isConnectingGoogle}
-              className="ml-2 px-3 py-1.5 rounded-xl bg-[#0b57d0] hover:bg-[#0842a0] text-white text-2xs font-bold shadow-2xs transition-all cursor-pointer hidden md:inline-flex items-center gap-1.5"
+              className="ml-2 px-2.5 py-1 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] text-white text-3xs font-semibold shadow-2xs transition-all cursor-pointer hidden md:inline-flex items-center gap-1.5"
               title="Authorize real Gmail, Google Calendar, and Google Tasks"
             >
               <Zap className="w-3 h-3" />
@@ -1274,56 +1253,64 @@ export default function DashboardPage() {
                   <div className="text-xs text-[#747775] dark:text-[#8e9099] truncate mt-1 text-left">
                     {displayEmail}
                   </div>
-
-                  {/* Live IST Timer with Seconds */}
-                  <div className="mt-2.5 flex items-center justify-start text-left">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#f0f4f9] dark:bg-[#282a2f] border border-[#e0e3e7] dark:border-[#34373d] font-mono text-2xs font-bold text-[#1f1f1f] dark:text-[#e2e2e6]">
-                      <Clock className="w-3 h-3 text-[#0b57d0] dark:text-[#a8c7fa]" />
-                      <span>{mounted && istTime ? istTime : "IST Active"}</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions & AI Recommendations Card (Compact & Balanced) */}
-            <div className="border border-[#e0e3e7] dark:border-[#34373d] rounded-2xl bg-white dark:bg-[#1d1f24] p-3.5 shadow-xs flex-1 flex flex-col justify-between">
+            {/* Quick Actions & AI Recommendations Card */}
+            <div className="border border-[#e0e3e7] dark:border-[#34373d] rounded-2xl bg-white dark:bg-[#1d1f24] p-3.5 shadow-xs flex-1 flex flex-col justify-between gap-3">
               {/* Top: AI Recommendation Header & Body */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f] dark:text-white">
-                    <Sparkles className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
+                    <Zap className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
                     <span>{workspace?.aiRecommendation?.title || "AI Recommended Action"}</span>
                   </div>
                   <button
                     onClick={handleApproveAction}
                     disabled={isApproving || workspace?.aiRecommendation?.status === "Executed"}
-                    className={`text-3xs font-semibold px-2 py-0.5 rounded-full transition-all cursor-pointer ${
+                    className={`text-3xs font-semibold px-2 py-0.5 rounded-full transition-all inline-flex items-center gap-1 ${
                       workspace?.aiRecommendation?.status === "Executed"
-                        ? "bg-[#e6f4ea] dark:bg-[#0f5223] text-[#137333] dark:text-[#81c995]"
-                        : "bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] hover:opacity-85 active:scale-95"
+                        ? "bg-[#e6f4ea] dark:bg-[#0f5223] text-[#137333] dark:text-[#81c995] border border-[#ceead6] dark:border-[#137333] cursor-default"
+                        : "bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] hover:opacity-85 active:scale-95 border border-[#d3e3fd] dark:border-[#a8c7fa]/40 cursor-pointer"
                     }`}
-                    title="Click to approve and execute recommendation"
+                    title={workspace?.aiRecommendation?.status === "Executed" ? "Recommendation Executed" : "Click to approve and execute recommendation"}
                   >
-                    {isApproving ? "Executing..." : (workspace?.aiRecommendation?.status || "Ready")}
+                    {workspace?.aiRecommendation?.status === "Executed" && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#1e8e3e]" />
+                    )}
+                    <span>{isApproving ? "Executing..." : (workspace?.aiRecommendation?.status || "Ready")}</span>
                   </button>
                 </div>
 
-                <div className="text-xs text-[#444746] dark:text-[#c4c6cf] leading-relaxed bg-[#f8fafd] dark:bg-[#282a2f] p-2 rounded-xl border border-[#e0e3e7]/80 dark:border-[#34373d]">
-                  {workspace?.aiRecommendation?.message ||
-                    "Reschedule Client Debrief to 3:30 PM to honor your protected focus block rule."}
+                <div className="bg-[#f8fafd] dark:bg-[#282a2f] p-3 rounded-xl border border-[#e0e3e7]/80 dark:border-[#34373d] flex flex-col gap-2">
+                  <div className="text-xs text-[#1f1f1f] dark:text-[#e2e2e6] leading-relaxed">
+                    {workspace?.aiRecommendation?.message ||
+                      "Reschedule Client Debrief to 3:30 PM to honor your protected focus block rule."}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-[#e0e3e7]/60 dark:border-[#34373d]/60 text-3xs text-[#747775] dark:text-[#8e9099]">
+                    <span className="px-1.5 py-0.5 rounded bg-white dark:bg-[#1d1f24] border border-[#e0e3e7] dark:border-[#34373d] font-medium text-[#137333] dark:text-[#81c995]">
+                      Calendar Conflict Cleared
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-white dark:bg-[#1d1f24] border border-[#e0e3e7] dark:border-[#34373d]">
+                      Rule: Protected Focus Block
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-white dark:bg-[#1d1f24] border border-[#e0e3e7] dark:border-[#34373d]">
+                      Target: 3:30 PM IST
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Middle: Call on Mobile (Voice Escalation) Toggle */}
-              <div className="pt-2 border-t border-[#e0e3e7]/80 dark:border-[#34373d]">
+              <div className="p-2.5 rounded-xl bg-[#f8fafd] dark:bg-[#282a2f] border border-[#e0e3e7]/80 dark:border-[#34373d]">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f] dark:text-white">
                       <PhoneCall className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
                       <span>Call on Mobile</span>
-                      <span className="text-3xs font-normal text-[#747775] dark:text-[#8e9099]">
-                        ({mobileNotify ? "Active" : "In-App Only"})
+                      <span className={`text-3xs font-semibold px-1.5 py-0.5 rounded-full ${mobileNotify ? "bg-[#e6f4ea] text-[#137333] dark:bg-[#0f5223] dark:text-[#81c995]" : "bg-[#f0f4f9] text-[#747775] dark:bg-[#34373d] dark:text-[#8e9099]"}`}>
+                        {mobileNotify ? "Active" : "In-App Only"}
                       </span>
                     </div>
                     <p className="text-3xs text-[#747775] dark:text-[#8e9099] truncate mt-0.5">
@@ -1483,7 +1470,7 @@ export default function DashboardPage() {
             {chatMessages.length > 0 && (
               <div className="mb-2 p-2 rounded-xl bg-[#f0f4f9] dark:bg-[#282a2f] border border-[#e0e3e7]/80 dark:border-[#34373d] flex items-start justify-between gap-2 text-xs animate-in fade-in duration-200">
                 <div className="flex items-start gap-1.5 min-w-0">
-                  <Sparkles className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa] shrink-0 mt-0.5" />
+                  <MessageSquare className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa] shrink-0 mt-0.5" />
                   <span className="text-[#1f1f1f] dark:text-[#e2e2e6] leading-snug">
                     {chatMessages[chatMessages.length - 1].text}
                   </span>
@@ -1500,7 +1487,7 @@ export default function DashboardPage() {
 
             <form onSubmit={handleSendChat} className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-[#d3e3fd] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] flex items-center justify-center shrink-0">
-                <Sparkles className="w-4 h-4" />
+                <MessageSquare className="w-4 h-4" />
               </div>
 
               <div className="relative flex-1">

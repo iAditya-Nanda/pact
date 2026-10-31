@@ -2,26 +2,20 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
-  Sparkles,
   ChevronRight,
   ChevronLeft,
   X,
-  Volume2,
-  VolumeX,
-  Play,
-  Pause,
   CheckCircle2,
-  Radio,
 } from "lucide-react";
-import { speakText, stopSpeaking, isVoiceMuted, setVoiceMuted } from "@/lib/voice-service";
+import { stopSpeaking } from "@/lib/voice-service";
 
 export interface TourStep {
   id: string;
   targetSelector: string;
   title: string;
   summary: string;
-  script: string;
-  placement?: "top" | "bottom" | "left" | "right" | "center";
+  details: string;
+  preferredPlacement?: "top" | "bottom" | "left" | "right";
 }
 
 export const TOUR_STEPS: TourStep[] = [
@@ -30,54 +24,54 @@ export const TOUR_STEPS: TourStep[] = [
     targetSelector: "#tour-brand",
     title: "PACT: Sovereign Chief of Staff",
     summary: "Unified executive intelligence running locally on your device.",
-    script:
-      "Welcome to PACT, your Sovereign AI Chief of Staff. PACT unifies Gmail, Google Calendar, and Tasks into a single coordinated command center, powered by in-process llama.cpp pure C++ inference on Apple Silicon.",
-    placement: "bottom",
+    details:
+      "Coordinates Gmail, Google Calendar, and Tasks into a single proactive command center with zero cloud lag and local privacy.",
+    preferredPlacement: "bottom",
   },
   {
     id: "step_workspace_insights",
     targetSelector: "#tour-workspace-insights",
-    title: "Real-Time Google Workspace Telemetry",
+    title: "Real-Time Workspace Telemetry",
     summary: "Continuous streaming across Gmail, Calendar, and Tasks.",
-    script:
-      "These three telemetry engines stream your live Google messages, calendar meetings, and priority deliverables with sub-millisecond SQLite persistence and zero cloud lag.",
-    placement: "bottom",
+    details:
+      "Three live engines track unread priority messages, meetings, and active deliverables with real-time Supabase PostgreSQL persistence.",
+    preferredPlacement: "right",
   },
   {
     id: "step_executive_panel",
     targetSelector: "#tour-executive-panel",
     title: "Proactive Calendar & Focus Protection",
     summary: "Automated conflict detection and protected deep work blocks.",
-    script:
-      "PACT is never passive. It actively safeguards your deep focus blocks, detects schedule collisions before they happen, and recommends conflict resolutions with one-click approval.",
-    placement: "left",
+    details:
+      "Continuously guards your schedule integrity, clears meeting collisions, and recommends resolution actions with one-click approval.",
+    preferredPlacement: "left",
   },
   {
     id: "step_ai_mode",
     targetSelector: "#tour-ai-mode",
     title: "Cryptographic Safe Mode Governance",
-    summary: "Human-in-the-Loop policy gate with HMAC SHA-256 payload verification.",
-    script:
-      "Security is non-negotiable. In Safe Mode, every consequential action like sending emails or rescheduling meetings requires your explicit cryptographic clearance before dispatch.",
-    placement: "left",
+    summary: "Human-in-the-loop policy gate with verified execution clearance.",
+    details:
+      "In Safe Mode, every consequential outbound action like scheduling meetings or drafting emails requires your explicit approval.",
+    preferredPlacement: "left",
   },
   {
     id: "step_workspace_launcher",
     targetSelector: "#tour-workspace-launcher",
-    title: "Native In-App macOS Workspace",
-    summary: "Dual-pane client with authentic web replicas and screen control.",
-    script:
-      "Launch full dual-pane Gmail, Calendar, and Tasks inside the app, complete with authentic Google Web replicas and autonomous AI screen control simulations.",
-    placement: "top",
+    title: "Native In-App Workspace",
+    summary: "Dual-pane desktop workspace with screen control simulation.",
+    details:
+      "Launch full dual-pane Gmail, Calendar, and Tasks directly inside PACT with coordinated sidecar intelligence and live OAuth.",
+    preferredPlacement: "top",
   },
   {
     id: "step_chat_interface",
     targetSelector: "#tour-chat-interface",
-    title: "Autonomous DAG Planning & Voice Co-Pilot",
+    title: "Autonomous DAG Planning & Co-Pilot",
     summary: "Multi-tool dependency graphs and upcoming mobile phone call escalation.",
-    script:
-      "Command PACT via natural voice or text. The local LLM constructs dependency graphs, verifies idempotency, and will soon call your mobile phone when urgent priority matters arrive. Thank you for exploring PACT.",
-    placement: "top",
+    details:
+      "Issue natural voice or text instructions to plan tasks, coordinate meetings, draft emails, and escalate urgent conflicts seamlessly.",
+    preferredPlacement: "top",
   },
 ];
 
@@ -94,22 +88,123 @@ interface TargetRect {
   height: number;
 }
 
+/**
+ * Intelligent positioning engine:
+ * Evaluates candidate placements (preferred, opposite, lateral) and chooses
+ * the placement that guarantees zero overlap with the target element while
+ * fitting cleanly within viewport bounds.
+ */
+function calculateNonOverlappingPosition(
+  target: TargetRect,
+  preferred: "top" | "bottom" | "left" | "right",
+  cardWidth: number,
+  cardHeight: number,
+  vw: number,
+  vh: number
+): { top: number; left: number } {
+  const margin = 16;
+  const padding = 16;
+
+  // Build candidate placements order prioritizing preferred placement
+  const order: Array<"top" | "bottom" | "left" | "right"> = [
+    preferred,
+    preferred === "bottom" ? "top" : preferred === "top" ? "bottom" : preferred === "left" ? "right" : "left",
+    preferred === "left" || preferred === "right" ? "bottom" : "right",
+    preferred === "left" || preferred === "right" ? "top" : "left",
+  ];
+
+  for (const p of order) {
+    let top = 0;
+    let left = 0;
+
+    if (p === "bottom") {
+      top = target.top + target.height + margin;
+      left = target.left + (target.width - cardWidth) / 2;
+    } else if (p === "top") {
+      top = target.top - cardHeight - margin;
+      left = target.left + (target.width - cardWidth) / 2;
+    } else if (p === "right") {
+      top = target.top + (target.height - cardHeight) / 2;
+      left = target.left + target.width + margin;
+    } else if (p === "left") {
+      top = target.top + (target.height - cardHeight) / 2;
+      left = target.left - cardWidth - margin;
+    }
+
+    // Clamp inside viewport
+    left = Math.max(padding, Math.min(left, vw - cardWidth - padding));
+    top = Math.max(padding, Math.min(top, vh - cardHeight - padding));
+
+    // Test for overlap with target element (including small safety buffer)
+    const cardRight = left + cardWidth;
+    const cardBottom = top + cardHeight;
+    const targetBuffer = 4;
+    const targetLeft = target.left - targetBuffer;
+    const targetTop = target.top - targetBuffer;
+    const targetRight = target.left + target.width + targetBuffer;
+    const targetBottom = target.top + target.height + targetBuffer;
+
+    const overlaps = !(
+      cardRight <= targetLeft ||
+      left >= targetRight ||
+      cardBottom <= targetTop ||
+      top >= targetBottom
+    );
+
+    if (!overlaps) {
+      return { top, left };
+    }
+  }
+
+  // Fallback if target occupies large portion of screen:
+  // Dock in the quadrant with largest available free clearance
+  const freeRight = vw - (target.left + target.width);
+  const freeLeft = target.left;
+  const freeBottom = vh - (target.top + target.height);
+  const freeTop = target.top;
+
+  const maxFree = Math.max(freeRight, freeLeft, freeBottom, freeTop);
+
+  if (maxFree === freeRight) {
+    return {
+      left: Math.max(padding, vw - cardWidth - padding),
+      top: Math.max(padding, Math.min(target.top + 20, vh - cardHeight - padding)),
+    };
+  }
+  if (maxFree === freeLeft) {
+    return {
+      left: padding,
+      top: Math.max(padding, Math.min(target.top + 20, vh - cardHeight - padding)),
+    };
+  }
+  if (maxFree === freeBottom) {
+    return {
+      left: Math.max(padding, Math.min(target.left, vw - cardWidth - padding)),
+      top: Math.max(padding, vh - cardHeight - padding),
+    };
+  }
+  return {
+    left: Math.max(padding, Math.min(target.left, vw - cardWidth - padding)),
+    top: padding,
+  };
+}
+
 export const SpotlightTour: React.FC<SpotlightTourProps> = ({
   isOpen,
   onClose,
-  onNavigateToTab,
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
-  const [isSpeakingNarration, setIsSpeakingNarration] = useState(false);
-  const [isMuted, setIsMuted] = useState(isVoiceMuted());
-  const [isPaused, setIsPaused] = useState(false);
   const tourCardRef = useRef<HTMLDivElement>(null);
-  const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const step = TOUR_STEPS[currentStepIndex];
 
-  // Calculate bounding rectangle of the target DOM element
+  // Stop any active speech synthesis immediately
+  useEffect(() => {
+    stopSpeaking();
+  }, [isOpen, currentStepIndex]);
+
+  // Update target coordinates from DOM
   const updateTargetRect = useCallback(() => {
     if (!isOpen || !step) return;
 
@@ -123,17 +218,15 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
         height: rect.height + 12,
       });
 
-      // Smoothly scroll target into view if out of viewport
       el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
     } else {
-      // Fallback: Center screen spotlight
       const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
       const vh = typeof window !== "undefined" ? window.innerHeight : 800;
       setTargetRect({
-        top: vh / 2 - 120,
-        left: vw / 2 - 240,
-        width: 480,
-        height: 240,
+        top: vh / 2 - 100,
+        left: vw / 2 - 200,
+        width: 400,
+        height: 200,
       });
     }
   }, [isOpen, step]);
@@ -141,7 +234,6 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
   useEffect(() => {
     if (!isOpen) {
       stopSpeaking();
-      setIsSpeakingNarration(false);
       return;
     }
 
@@ -156,47 +248,26 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
     };
   }, [isOpen, updateTargetRect]);
 
-  // Handle Voice Narration and Step Progression
+  // Keyboard navigation: Left/Right arrows and Escape key
   useEffect(() => {
-    if (!isOpen || !step) return;
+    if (!isOpen) return;
 
-    if (autoAdvanceTimerRef.current) {
-      clearTimeout(autoAdvanceTimerRef.current);
-      autoAdvanceTimerRef.current = null;
-    }
-
-    if (isPaused) {
-      stopSpeaking();
-      setIsSpeakingNarration(false);
-      return;
-    }
-
-    if (!isMuted) {
-      speakText(
-        step.script,
-        () => setIsSpeakingNarration(true),
-        () => {
-          setIsSpeakingNarration(false);
-          // Auto advance to next step after speech concludes
-          if (currentStepIndex < TOUR_STEPS.length - 1) {
-            autoAdvanceTimerRef.current = setTimeout(() => {
-              setCurrentStepIndex((prev) => prev + 1);
-            }, 800);
-          }
-        }
-      );
-    }
-
-    return () => {
-      if (autoAdvanceTimerRef.current) {
-        clearTimeout(autoAdvanceTimerRef.current);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      } else if (e.key === "ArrowRight") {
+        handleNext();
+      } else if (e.key === "ArrowLeft") {
+        handlePrev();
       }
     };
-  }, [isOpen, currentStepIndex, isMuted, isPaused, step]);
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, currentStepIndex]);
 
   const handleNext = () => {
     stopSpeaking();
-    if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
     if (currentStepIndex < TOUR_STEPS.length - 1) {
       setCurrentStepIndex((prev) => prev + 1);
     } else {
@@ -206,7 +277,6 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
 
   const handlePrev = () => {
     stopSpeaking();
-    if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
     if (currentStepIndex > 0) {
       setCurrentStepIndex((prev) => prev - 1);
     }
@@ -214,72 +284,40 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
 
   const handleClose = () => {
     stopSpeaking();
-    if (autoAdvanceTimerRef.current) clearTimeout(autoAdvanceTimerRef.current);
     setCurrentStepIndex(0);
     onClose();
   };
 
-  const handleToggleMute = () => {
-    const nextMuted = !isMuted;
-    setIsMuted(nextMuted);
-    setVoiceMuted(nextMuted);
-    if (nextMuted) {
-      stopSpeaking();
-      setIsSpeakingNarration(false);
-    } else if (step) {
-      speakText(
-        step.script,
-        () => setIsSpeakingNarration(true),
-        () => setIsSpeakingNarration(false)
-      );
-    }
-  };
-
   if (!isOpen || !step) return null;
 
-  // Calculate card positioning relative to targetRect
-  let cardTop = 100;
-  let cardLeft = 100;
-  if (targetRect) {
-    const placement = step.placement || "bottom";
-    const cardWidth = 420;
-    const cardHeight = 260;
-    const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
-    const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  // Compute card position guaranteed not to overlap target
+  const cardWidth = 380;
+  const cardHeight = 220;
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
 
-    if (placement === "bottom") {
-      cardTop = targetRect.top + targetRect.height + 16;
-      cardLeft = targetRect.left + targetRect.width / 2 - cardWidth / 2;
-    } else if (placement === "top") {
-      cardTop = targetRect.top - cardHeight - 16;
-      cardLeft = targetRect.left + targetRect.width / 2 - cardWidth / 2;
-    } else if (placement === "left") {
-      cardTop = targetRect.top + targetRect.height / 2 - cardHeight / 2;
-      cardLeft = targetRect.left - cardWidth - 16;
-    } else if (placement === "right") {
-      cardTop = targetRect.top + targetRect.height / 2 - cardHeight / 2;
-      cardLeft = targetRect.left + targetRect.width + 16;
-    } else {
-      cardTop = vh / 2 - cardHeight / 2;
-      cardLeft = vw / 2 - cardWidth / 2;
-    }
-
-    // Boundary constraints within viewport
-    cardLeft = Math.max(16, Math.min(cardLeft, vw - cardWidth - 16));
-    cardTop = Math.max(16, Math.min(cardTop, vh - cardHeight - 16));
-  }
+  const { top: cardTop, left: cardLeft } = targetRect
+    ? calculateNonOverlappingPosition(
+        targetRect,
+        step.preferredPlacement || "bottom",
+        cardWidth,
+        cardHeight,
+        vw,
+        vh
+      )
+    : { top: vh / 2 - cardHeight / 2, left: vw / 2 - cardWidth / 2 };
 
   const progressPercent = ((currentStepIndex + 1) / TOUR_STEPS.length) * 100;
 
   return (
-    <div className="fixed inset-0 z-99999 overflow-hidden select-none animate-in fade-in duration-300">
-      {/* 1. Backdrop Canvas with Cutout Mask */}
+    <div className="fixed inset-0 z-99999 overflow-hidden select-none animate-in fade-in duration-200">
+      {/* 1. Backdrop SVG Mask with Smooth Cutout */}
       <svg className="absolute inset-0 w-full h-full pointer-events-auto">
         <defs>
           <mask id="spotlight-mask">
             {/* White covers entire screen */}
             <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            {/* Black cutout reveals element underneath */}
+            {/* Black cutout smoothly reveals target element */}
             {targetRect && (
               <rect
                 x={targetRect.left}
@@ -288,25 +326,29 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
                 height={targetRect.height}
                 rx="16"
                 fill="black"
-                className="transition-all duration-400 ease-out"
+                style={{
+                  transition:
+                    "x 300ms cubic-bezier(0.2, 0, 0, 1), y 300ms cubic-bezier(0.2, 0, 0, 1), width 300ms cubic-bezier(0.2, 0, 0, 1), height 300ms cubic-bezier(0.2, 0, 0, 1)",
+                }}
               />
             )}
           </mask>
         </defs>
 
-        {/* Shaded backdrop with mask */}
+        {/* Muted backdrop with cutout mask (Click backdrop to close) */}
         <rect
           x="0"
           y="0"
           width="100%"
           height="100%"
-          fill="rgba(5, 7, 12, 0.78)"
+          fill="rgba(15, 23, 42, 0.65)"
           mask="url(#spotlight-mask)"
           onClick={handleClose}
+          className="cursor-pointer"
         />
       </svg>
 
-      {/* 2. Animated Glowing Border Box Around Target Element */}
+      {/* 2. Clean Material Design 3 Focus Ring Around Target (Zero Cyberpunk, Zero Overlap) */}
       {targetRect && (
         <div
           style={{
@@ -314,108 +356,73 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
             left: `${targetRect.left}px`,
             width: `${targetRect.width}px`,
             height: `${targetRect.height}px`,
+            transition: "all 300ms cubic-bezier(0.2, 0, 0, 1)",
           }}
-          className="absolute rounded-2xl border-2 border-cyan-400/80 shadow-[0_0_35px_rgba(6,182,212,0.45)] pointer-events-none transition-all duration-400 ease-out"
-        >
-          <div className="absolute -top-3 -right-3 px-2 py-0.5 rounded-full bg-cyan-500 text-[#090d16] font-extrabold text-3xs uppercase tracking-wider flex items-center gap-1 shadow-sm">
-            <Radio className="w-2.5 h-2.5 animate-pulse text-[#090d16]" />
-            <span>Target Focused</span>
-          </div>
-        </div>
+          className="absolute rounded-2xl ring-2 ring-[#0b57d0] dark:ring-[#a8c7fa] shadow-[0_0_0_4px_rgba(11,87,208,0.18)] dark:shadow-[0_0_0_4px_rgba(168,199,250,0.18)] pointer-events-none"
+        />
       )}
 
-      {/* 3. Floating Spotlight HUD Pitch Card */}
+      {/* 3. Floating Spotlight Card (Clean M3 Enterprise Style from DESIGN.md) */}
       <div
         ref={tourCardRef}
         style={{
           top: `${cardTop}px`,
           left: `${cardLeft}px`,
+          transition:
+            "top 300ms cubic-bezier(0.2, 0, 0, 1), left 300ms cubic-bezier(0.2, 0, 0, 1)",
         }}
-        className="absolute w-[420px] max-w-[calc(100vw-32px)] bg-[#11141c]/95 dark:bg-[#11141c]/95 border border-cyan-500/40 rounded-2xl shadow-[0_12px_45px_rgba(0,0,0,0.6)] backdrop-blur-xl p-5 text-white pointer-events-auto transition-all duration-300 ease-out"
+        className="absolute w-[380px] max-w-[calc(100vw-32px)] bg-white/95 dark:bg-[#1d1f24]/95 border border-[#e0e3e7] dark:border-[#34373d] rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/60 backdrop-blur-md p-4.5 text-[#1f1f1f] dark:text-[#e2e2e6] pointer-events-auto"
       >
-        {/* Top Header Row: Step Pill + Audio Indicator + Close */}
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.8 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-3xs font-extrabold tracking-wider uppercase">
-              Pitch Step {currentStepIndex + 1} of {TOUR_STEPS.length}
-            </span>
-            <span className="text-3xs text-neutral-400 font-mono">~10s pitch</span>
-          </div>
+        {/* Header: Step Pill & Close */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <span className="px-2.5 py-0.5 rounded-full bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] text-3xs font-semibold tracking-wide">
+            Step {currentStepIndex + 1} of {TOUR_STEPS.length}
+          </span>
 
-          <div className="flex items-center gap-1.5">
-            {/* Audio Narration Indicator */}
-            <button
-              onClick={handleToggleMute}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              title={isMuted ? "Unmute Voice Narration" : "Mute Voice Narration"}
-            >
-              {isMuted ? (
-                <VolumeX className="w-4 h-4 text-neutral-500" />
-              ) : (
-                <Volume2 className={`w-4 h-4 ${isSpeakingNarration ? "text-cyan-400 animate-pulse" : "text-neutral-300"}`} />
-              )}
-            </button>
-
-            {/* Close Button */}
-            <button
-              onClick={handleClose}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              title="Close Tour"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={handleClose}
+            className="p-1 rounded-full text-[#747775] hover:text-[#1f1f1f] dark:hover:text-white hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] transition-colors cursor-pointer"
+            title="Close Tour"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Step Title & Summary */}
-        <div className="space-y-1.5 mb-3.5">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
-            <h3 className="text-sm font-extrabold text-white tracking-tight">
-              {step.title}
-            </h3>
-          </div>
-          <p className="text-xs font-medium text-cyan-200/90 leading-relaxed">
+        {/* Title & Summary */}
+        <div className="space-y-1 mb-2.5">
+          <h3 className="text-sm font-bold text-[#1f1f1f] dark:text-white tracking-tight leading-snug">
+            {step.title}
+          </h3>
+          <p className="text-xs text-[#444746] dark:text-[#c4c6cf] leading-relaxed">
             {step.summary}
           </p>
         </div>
 
-        {/* Spoken Script Box with Live Telemetry */}
-        <div className="mb-4 p-3 rounded-xl bg-black/40 border border-white/10 text-2xs text-neutral-300 leading-relaxed">
-          <div className="flex items-center gap-1.5 text-3xs font-bold uppercase tracking-wider text-neutral-400 mb-1">
-            {isSpeakingNarration ? (
-              <span className="flex items-center gap-1 text-cyan-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-                Narrating (en-IN Female Voice)
-              </span>
-            ) : (
-              <span>Spoken Narration</span>
-            )}
-          </div>
-          <p className="text-neutral-200 font-sans italic">
-            "{step.script}"
-          </p>
+        {/* Details Box */}
+        <div className="p-2.5 rounded-xl bg-[#f8fafd] dark:bg-[#282a2f] border border-[#e0e3e7]/80 dark:border-[#34373d] text-xs text-[#444746] dark:text-[#c4c6cf] leading-relaxed mb-3">
+          {step.details}
         </div>
 
-        {/* Overall Tour Progress Bar (Target: 60 Seconds Total) */}
-        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mb-4">
+        {/* M3 Linear Progress Bar */}
+        <div className="w-full h-1 bg-[#e0e3e7] dark:bg-[#34373d] rounded-full overflow-hidden mb-3.5">
           <div
             style={{ width: `${progressPercent}%` }}
-            className="h-full bg-linear-to-r from-cyan-400 to-blue-500 rounded-full transition-all duration-400"
+            className="h-full bg-[#0b57d0] dark:bg-[#a8c7fa] rounded-full transition-all duration-300"
           />
         </div>
 
-        {/* Bottom Navigation Buttons */}
+        {/* Footer Navigation */}
         <div className="flex items-center justify-between gap-3">
           <button
             onClick={handlePrev}
             disabled={currentStepIndex === 0}
-            className="px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none text-xs font-semibold text-neutral-300 flex items-center gap-1 transition-all cursor-pointer"
+            className="px-3 py-1.5 rounded-full border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] disabled:opacity-30 disabled:pointer-events-none text-xs font-semibold text-[#444746] dark:text-[#c4c6cf] flex items-center gap-1 transition-all cursor-pointer"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
-            <span>Previous</span>
+            <span>Back</span>
           </button>
 
+          {/* Step Dots */}
           <div className="flex items-center gap-1.5">
             {TOUR_STEPS.map((_, idx) => (
               <button
@@ -424,23 +431,21 @@ export const SpotlightTour: React.FC<SpotlightTourProps> = ({
                   stopSpeaking();
                   setCurrentStepIndex(idx);
                 }}
-                className={`w-2 h-2 rounded-full transition-all cursor-pointer ${
+                className={`h-1.5 rounded-full transition-all cursor-pointer ${
                   idx === currentStepIndex
-                    ? "w-5 bg-cyan-400"
-                    : idx < currentStepIndex
-                    ? "bg-cyan-700"
-                    : "bg-white/20"
+                    ? "w-4 bg-[#0b57d0] dark:bg-[#a8c7fa]"
+                    : "w-1.5 bg-[#e0e3e7] dark:bg-[#34373d] hover:bg-[#747775]"
                 }`}
-                title={`Jump to step ${idx + 1}`}
+                title={`Go to step ${idx + 1}`}
               />
             ))}
           </div>
 
           <button
             onClick={handleNext}
-            className="px-4 py-1.5 rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 hover:brightness-110 active:scale-95 text-xs font-bold text-[#090d16] flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            className="px-4 py-1.5 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] dark:bg-[#a8c7fa] dark:hover:bg-[#d3e3fd] text-white dark:text-[#041e49] text-xs font-semibold shadow-2xs active:scale-95 flex items-center gap-1 transition-all cursor-pointer"
           >
-            <span>{currentStepIndex === TOUR_STEPS.length - 1 ? "Finish Tour" : "Next"}</span>
+            <span>{currentStepIndex === TOUR_STEPS.length - 1 ? "Finish" : "Next"}</span>
             {currentStepIndex === TOUR_STEPS.length - 1 ? (
               <CheckCircle2 className="w-3.5 h-3.5" />
             ) : (

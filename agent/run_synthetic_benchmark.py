@@ -70,7 +70,7 @@ class SyntheticBenchmarkSuite:
         print(f"{BOLD}{PURPLE}       PACT ENTERPRISE AGENTIC SYSTEM: SYNTHETIC BENCHMARK SUITE               {RESET}")
         print(f"{BOLD}{PURPLE}================================================================================{RESET}")
         print(f"Target Model: {BOLD}{local_llm_client.config.tier_a_model}{RESET} (Local C++ inference)")
-        print(f"Database:     {BOLD}{db_manager.db_path}{RESET} (SQLite WAL mode)")
+        print(f"Database:     {BOLD}{db_manager.engine_name}{RESET}")
 
         # 1. Synthetic Intent & Extraction Throughput
         self.benchmark_intent_extraction()

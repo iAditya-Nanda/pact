@@ -125,7 +125,7 @@ def init_database(manager: DatabaseManager = db_manager, sync_live: bool = True)
     with manager.get_connection() as conn:
         conn.executescript(SCHEMA_SQL)
     seed_mock_data(manager)
-    if sync_live and str(manager.db_path).endswith("pact_agent.db"):
+    if sync_live and (manager.is_postgres or str(manager.db_path).endswith("pact_agent.db")):
         sync_workspace_data(manager)
 
 
@@ -196,6 +196,22 @@ def sync_workspace_data(manager: DatabaseManager = db_manager) -> None:
                     """,
                     (eid, sender, user_email, subject, snippet, priority, is_read, received_at),
                 )
+                if manager.is_postgres:
+                    conn.execute(
+                        """
+                        INSERT INTO emails
+                        (id, user_id, sender, recipient, subject, body, priority, status, received_at)
+                        VALUES (?, 'default_user', ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET
+                            sender=excluded.sender,
+                            subject=excluded.subject,
+                            body=excluded.body,
+                            priority=excluded.priority,
+                            status=excluded.status,
+                            received_at=excluded.received_at;
+                        """,
+                        (eid, sender, user_email, subject, snippet, priority.lower(), "read" if is_read else "unread", received_at),
+                    )
 
             # 2. Sync Calendar Events (preserve default core events evt_001 / evt_002)
             for evt in data.get("calendarEvents", []):
@@ -223,6 +239,21 @@ def sync_workspace_data(manager: DatabaseManager = db_manager) -> None:
                     """,
                     (ev_id, title, desc, start_time, end_time, status),
                 )
+                if manager.is_postgres:
+                    conn.execute(
+                        """
+                        INSERT INTO calendar_events
+                        (id, user_id, title, description, start_time, end_time, attendees, status)
+                        VALUES (?, 'default_user', ?, ?, ?, ?, '[]', ?)
+                        ON CONFLICT(id) DO UPDATE SET
+                            title=excluded.title,
+                            description=excluded.description,
+                            start_time=excluded.start_time,
+                            end_time=excluded.end_time,
+                            status=excluded.status;
+                        """,
+                        (ev_id, title, desc, start_time, end_time, status.lower()),
+                    )
 
             # 3. Sync Tasks
             for tsk in data.get("tasks", []):
@@ -247,6 +278,21 @@ def sync_workspace_data(manager: DatabaseManager = db_manager) -> None:
                     """,
                     (t_id, t_title, t_desc, due, priority, status),
                 )
+                if manager.is_postgres:
+                    conn.execute(
+                        """
+                        INSERT INTO tasks
+                        (id, user_id, title, description, due_date, priority, status, source)
+                        VALUES (?, 'default_user', ?, ?, ?, ?, ?, 'workspace')
+                        ON CONFLICT(id) DO UPDATE SET
+                            title=excluded.title,
+                            description=excluded.description,
+                            due_date=excluded.due_date,
+                            priority=excluded.priority,
+                            status=excluded.status;
+                        """,
+                        (t_id, t_title, t_desc, due, priority.lower(), "completed" if status == "COMPLETED" else "pending"),
+                    )
     except Exception as e:
         print(f"Warning: Failed to sync workspace.json to SQLite: {e}")
 
@@ -396,3 +442,8 @@ def seed_mock_data(manager: DatabaseManager = db_manager) -> None:
             ('task_001', 'Finalize Product Release Checklist', 'Complete security verification and test signoffs',
              '2026-10-31 12:00:00', 'URGENT', 'PENDING')
         """)
+
+
+# Universal alias supporting both Supabase PostgreSQL and SQLite
+sync_db_to_workspace_json = sync_sqlite_to_workspace_json
+

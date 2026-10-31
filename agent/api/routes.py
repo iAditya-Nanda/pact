@@ -51,7 +51,7 @@ def health_check(
     """
     Health and readiness probe inspecting database connection, local LLM runtime, and active tools.
     """
-    db_status = "connected" if manager.db_path.exists() else "uninitialized"
+    db_status = f"connected ({manager.engine_name})" if (manager.is_postgres or manager.db_path.exists()) else "uninitialized"
     active_tools = list(orch.registry._tools.keys())
     return HealthResponse(
         status="healthy",

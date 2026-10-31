@@ -3,27 +3,34 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/Button";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import gsap from "gsap";
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onNavigate?: (href: string) => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   const router = useRouter();
 
   const handleNav = (href: string) => {
-    gsap.to("main", {
-      opacity: 0,
-      y: -14,
-      duration: 0.3,
-      ease: "power2.inOut",
-      onComplete: () => router.push(href),
-    });
+    if (onNavigate) {
+      onNavigate(href);
+    } else {
+      gsap.to("main", {
+        x: "-100%",
+        opacity: 0,
+        duration: 0.45,
+        ease: "power3.inOut",
+        onComplete: () => router.push(href),
+      });
+    }
   };
 
   return (
-    <header className="h-16 border-b border-[#e0e3e7]/80 dark:border-[#34373d]/80 bg-white/70 dark:bg-[#111318]/70 backdrop-blur-xl px-4 lg:px-8 flex items-center justify-between shrink-0 sticky top-0 z-50">
+    <header className="h-16 border-b border-white/20 dark:border-white/10 bg-white/30 dark:bg-[#0c0e14]/40 backdrop-blur-2xl px-4 lg:px-8 flex items-center justify-between shrink-0 sticky top-0 z-50 transition-colors">
       <Link href="/" className="flex items-center gap-3 group cursor-pointer">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0b57d0] to-[#38bdf8] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs transition-transform group-hover:scale-105">
+        <div className="w-8 h-8 rounded-xl bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs transition-transform group-hover:scale-105">
           P
         </div>
         <div className="flex items-baseline gap-2">
@@ -39,14 +46,14 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-3">
         <button
           onClick={() => handleNav("/login")}
-          className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-[#444746] dark:text-[#c4c6cf] hover:text-[#0b57d0] dark:hover:text-white hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] transition-all cursor-pointer"
+          className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#444746] dark:text-[#c4c6cf] hover:text-[#0b57d0] dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/10 transition-all cursor-pointer"
         >
           Login
         </button>
 
         <button
           onClick={() => handleNav("/sign-up")}
-          className="px-4 py-1.5 rounded-xl bg-[#0b57d0] hover:bg-[#0842a0] active:scale-95 text-white font-semibold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+          className="px-4.5 py-1.5 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] active:scale-95 text-white font-semibold text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
         >
           <span>Get Started</span>
           <ArrowRight className="w-3.5 h-3.5" />

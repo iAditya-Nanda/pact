@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Scene3D } from "@/components/3d/Scene3D";
-import { ArrowLeft, Loader2, Rocket, Sparkles, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import gsap from "gsap";
 
 export default function SignUpPage() {
@@ -20,7 +20,6 @@ export default function SignUpPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isVerifyingSession, setIsVerifyingSession] = useState(true);
   const router = useRouter();
-  const cardRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
   // 1-second deliberate verification of active session
@@ -41,28 +40,42 @@ export default function SignUpPage() {
     return () => clearTimeout(timer);
   }, [user, router]);
 
-  // GSAP Entrance animation
+  // Entrance slide from right
   useEffect(() => {
-    if (!isVerifyingSession && cardRef.current) {
+    if (!isVerifyingSession && pageRef.current) {
       gsap.fromTo(
-        cardRef.current,
-        { opacity: 0, y: 24, scale: 0.96 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.65, ease: "power3.out" }
+        pageRef.current,
+        { x: "100%", opacity: 0 },
+        { x: "0%", opacity: 1, duration: 0.55, ease: "power3.out" }
       );
     }
   }, [isVerifyingSession]);
 
-  const navigateWithTransition = (href: string) => {
+  const navigateBackToHome = () => {
     if (pageRef.current) {
       gsap.to(pageRef.current, {
+        x: "100%",
         opacity: 0,
-        y: -12,
-        duration: 0.3,
-        ease: "power2.inOut",
-        onComplete: () => router.push(href),
+        duration: 0.45,
+        ease: "power3.inOut",
+        onComplete: () => router.push("/"),
       });
     } else {
-      router.push(href);
+      router.push("/");
+    }
+  };
+
+  const navigateToLogin = () => {
+    if (pageRef.current) {
+      gsap.to(pageRef.current, {
+        x: "-100%",
+        opacity: 0,
+        duration: 0.4,
+        ease: "power2.inOut",
+        onComplete: () => router.push("/login"),
+      });
+    } else {
+      router.push("/login");
     }
   };
 
@@ -110,9 +123,9 @@ export default function SignUpPage() {
       <div className="h-screen max-h-screen flex flex-col justify-between overflow-hidden bg-[#f8fafd] dark:bg-[#0c0e14] select-none text-[#1f1f1f] dark:text-[#e2e2e6] relative">
         <Scene3D mode="signup" />
         <div className="relative z-10 flex flex-col h-full justify-between">
-          <header className="h-16 border-b border-[#e0e3e7]/80 dark:border-[#34373d]/80 bg-white/60 dark:bg-[#111318]/60 backdrop-blur-md px-6 lg:px-10 flex items-center justify-between shrink-0">
+          <header className="h-16 border-b border-white/20 dark:border-white/10 bg-white/30 dark:bg-[#0c0e14]/40 backdrop-blur-2xl px-6 lg:px-10 flex items-center justify-between shrink-0">
             <Link href="/" className="flex items-center gap-3 group cursor-pointer">
-              <div className="w-8 h-8 rounded-lg bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs">
+              <div className="w-8 h-8 rounded-xl bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs">
                 P
               </div>
               <span className="text-xl font-bold tracking-tight text-[#1f1f1f] dark:text-white">
@@ -122,15 +135,15 @@ export default function SignUpPage() {
           </header>
 
           <main className="flex-1 flex items-center justify-center px-6 py-8">
-            <div className="flex flex-col items-center gap-3.5 p-8 rounded-2xl bg-white/70 dark:bg-[#1d1f24]/70 backdrop-blur-xl border border-[#e0e3e7] dark:border-[#34373d] shadow-lg animate-in fade-in duration-200">
-              <Loader2 className="w-8 h-8 animate-spin text-[#0b57d0] dark:text-[#a8c7fa]" />
+            <div className="flex flex-col items-center gap-3.5 p-8 rounded-3xl bg-white/25 dark:bg-[#1d1f24]/30 backdrop-blur-2xl border border-white/50 dark:border-white/10 shadow-xl animate-in fade-in duration-200">
+              <Loader2 className="w-8 h-8 animate-spin text-[#0b57d0] dark:text-[#38bdf8]" />
               <span className="text-sm font-medium text-[#444746] dark:text-[#c4c6cf]">
                 Verifying active session...
               </span>
             </div>
           </main>
 
-          <footer className="h-12 border-t border-[#e0e3e7]/80 dark:border-[#34373d]/80 bg-white/60 dark:bg-[#111318]/60 backdrop-blur-md px-6 lg:px-10 flex items-center justify-between text-xs text-[#747775] dark:text-[#8e9099] shrink-0">
+          <footer className="h-12 border-t border-white/20 dark:border-white/10 bg-white/30 dark:bg-[#0c0e14]/40 backdrop-blur-md px-6 lg:px-10 flex items-center justify-between text-2xs text-[#747775] dark:text-[#8e9099] shrink-0">
             <div>PACT • Onboarding Profile Calibration</div>
             <div>Secure session verification</div>
           </footer>
@@ -144,17 +157,17 @@ export default function SignUpPage() {
       ref={pageRef}
       className="min-h-screen flex flex-col justify-between overflow-hidden bg-[#f8fafd] dark:bg-[#0c0e14] select-none text-[#1f1f1f] dark:text-[#e2e2e6] relative"
     >
-      {/* 3D WebGL Canvas Layer (mode="signup") */}
+      {/* 3D WebGL Jellyfish Layer (mode="signup") */}
       <Scene3D mode="signup" />
 
-      {/* Ambient Gradient Layer */}
-      <div className="fixed inset-0 pointer-events-none z-1 bg-gradient-to-l from-transparent via-[#f8fafd]/30 dark:via-[#0c0e14]/40 to-[#f8fafd]/80 dark:to-[#0c0e14]/90" />
+      {/* Ambient Gradient Vignette */}
+      <div className="fixed inset-0 pointer-events-none z-1 bg-gradient-to-r from-transparent via-[#f8fafd]/20 dark:via-[#0c0e14]/30 to-[#f8fafd]/70 dark:to-[#0c0e14]/80" />
 
       <div className="relative z-10 flex flex-col min-h-screen justify-between">
         {/* Top Header Bar */}
-        <header className="h-16 border-b border-[#e0e3e7]/80 dark:border-[#34373d]/80 bg-white/60 dark:bg-[#111318]/60 backdrop-blur-md px-6 lg:px-10 flex items-center justify-between shrink-0">
+        <header className="h-16 border-b border-white/20 dark:border-white/10 bg-white/30 dark:bg-[#0c0e14]/40 backdrop-blur-2xl px-6 lg:px-10 flex items-center justify-between shrink-0">
           <Link href="/" className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-8 h-8 rounded-lg bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs transition-transform group-hover:scale-105">
+            <div className="w-8 h-8 rounded-xl bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs transition-transform group-hover:scale-105">
               P
             </div>
             <span className="text-xl font-bold tracking-tight text-[#1f1f1f] dark:text-white">
@@ -163,25 +176,17 @@ export default function SignUpPage() {
           </Link>
 
           <button
-            onClick={() => navigateWithTransition("/")}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#444746] dark:text-[#c4c6cf] hover:text-[#0b57d0] dark:hover:text-[#a8c7fa] transition-colors cursor-pointer"
+            onClick={navigateBackToHome}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#444746] dark:text-[#c4c6cf] hover:text-[#0b57d0] dark:hover:text-[#38bdf8] transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Home</span>
           </button>
         </header>
 
-        {/* Sign Up Canvas: Glassmorphic Form on Left, 3D Jellyfish & Rocket on Right */}
-        <main className="flex-1 flex items-center justify-center lg:justify-start px-6 lg:px-20 py-8">
-          <div
-            ref={cardRef}
-            className="max-w-md w-full bg-white/85 dark:bg-[#1d1f24]/85 backdrop-blur-2xl rounded-3xl border border-[#e0e3e7] dark:border-[#34373d] p-7 sm:p-8 shadow-2xl text-center relative"
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0b57d0]/10 dark:bg-[#a8c7fa]/10 text-xs font-bold text-[#0b57d0] dark:text-[#a8c7fa] mb-3">
-              <Rocket className="w-3.5 h-3.5" />
-              <span>Executive Onboarding</span>
-            </div>
-
+        {/* Sign Up Canvas: Glassmorphic Form, Jellyfish swimming in 3D water */}
+        <main className="flex-1 flex items-center justify-center lg:justify-start px-6 lg:px-24 py-8">
+          <div className="max-w-md w-full bg-white/25 dark:bg-[#1d1f24]/30 backdrop-blur-2xl rounded-3xl border border-white/50 dark:border-white/10 p-7 sm:p-8 shadow-2xl text-center relative">
             <h1 className="text-2xl font-bold text-[#1f1f1f] dark:text-white tracking-tight mb-1.5">
               Create your PACT Profile
             </h1>
@@ -191,7 +196,7 @@ export default function SignUpPage() {
             </p>
 
             {errorMessage && (
-              <div className="mb-4 p-3 rounded-2xl bg-[#ba1a1a]/10 border border-[#ba1a1a]/20 text-xs text-[#ba1a1a] dark:text-[#ffb4ab] text-left">
+              <div className="mb-4 p-3 rounded-2xl bg-[#ba1a1a]/15 border border-[#ba1a1a]/30 text-xs text-[#ba1a1a] dark:text-[#ffb4ab] text-left">
                 {errorMessage}
               </div>
             )}
@@ -213,7 +218,7 @@ export default function SignUpPage() {
                   value={formData.fullName}
                   onChange={handleChange}
                   placeholder="e.g. Aditya Nanda"
-                  className="w-full rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white/70 dark:bg-[#282a2f]/70 px-3.5 py-2 text-xs text-[#1f1f1f] dark:text-white placeholder:text-[#747775] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] transition-all"
+                  className="w-full rounded-xl border border-white/40 dark:border-white/15 bg-white/40 dark:bg-white/10 px-3.5 py-2 text-xs text-[#1f1f1f] dark:text-white placeholder:text-[#747775] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] transition-all"
                 />
               </div>
 
@@ -235,7 +240,7 @@ export default function SignUpPage() {
                     value={formData.age}
                     onChange={handleChange}
                     placeholder="e.g. 24"
-                    className="w-full rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white/70 dark:bg-[#282a2f]/70 px-3.5 py-2 text-xs text-[#1f1f1f] dark:text-white placeholder:text-[#747775] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] transition-all"
+                    className="w-full rounded-xl border border-white/40 dark:border-white/15 bg-white/40 dark:bg-white/10 px-3.5 py-2 text-xs text-[#1f1f1f] dark:text-white placeholder:text-[#747775] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] transition-all"
                   />
                 </div>
 
@@ -254,7 +259,7 @@ export default function SignUpPage() {
                     value={formData.role}
                     onChange={handleChange}
                     placeholder="e.g. Lead Architect"
-                    className="w-full rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white/70 dark:bg-[#282a2f]/70 px-3.5 py-2 text-xs text-[#1f1f1f] dark:text-white placeholder:text-[#747775] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] transition-all"
+                    className="w-full rounded-xl border border-white/40 dark:border-white/15 bg-white/40 dark:bg-white/10 px-3.5 py-2 text-xs text-[#1f1f1f] dark:text-white placeholder:text-[#747775] focus:outline-none focus:ring-2 focus:ring-[#0b57d0] transition-all"
                   />
                 </div>
               </div>
@@ -271,7 +276,7 @@ export default function SignUpPage() {
                   name="workingHours"
                   value={formData.workingHours}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white/70 dark:bg-[#282a2f]/70 px-3.5 py-2 text-xs text-[#1f1f1f] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b57d0] transition-all cursor-pointer"
+                  className="w-full rounded-xl border border-white/40 dark:border-white/15 bg-white/40 dark:bg-[#1d1f24] px-3.5 py-2 text-xs text-[#1f1f1f] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0b57d0] transition-all cursor-pointer"
                 >
                   <option value="Avoid meetings before 10:00 AM">
                     Avoid meetings before 10:00 AM (Recommended)
@@ -289,10 +294,10 @@ export default function SignUpPage() {
               <button
                 type="submit"
                 disabled={isLoading || isSubmitting}
-                className="w-full rounded-2xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#282a2f] hover:bg-[#f0f4f9] dark:hover:bg-[#34373d] active:scale-98 px-6 py-3 font-semibold text-xs text-[#1f1f1f] dark:text-white flex items-center justify-center gap-3 transition-all duration-150 shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+                className="w-full rounded-full border border-white/40 dark:border-white/15 bg-[#0b57d0] hover:bg-[#0842a0] active:scale-98 px-6 py-3 font-semibold text-xs text-white flex items-center justify-center gap-2.5 transition-all duration-150 shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed mt-2"
               >
                 {isSubmitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-[#0b57d0] dark:text-[#a8c7fa]" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                 ) : (
                   <svg className="w-4.5 h-4.5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                     <path
@@ -317,11 +322,11 @@ export default function SignUpPage() {
               </button>
             </form>
 
-            <div className="pt-3.5 border-t border-[#e0e3e7]/80 dark:border-[#34373d] text-xs text-[#444746] dark:text-[#c4c6cf]">
+            <div className="pt-3.5 border-t border-white/30 dark:border-white/10 text-xs text-[#444746] dark:text-[#c4c6cf]">
               Already have an account?{" "}
               <button
-                onClick={() => navigateWithTransition("/login")}
-                className="text-[#0b57d0] dark:text-[#a8c7fa] font-bold hover:underline cursor-pointer"
+                onClick={navigateToLogin}
+                className="text-[#0b57d0] dark:text-[#38bdf8] font-bold hover:underline cursor-pointer"
               >
                 Sign in
               </button>
@@ -330,9 +335,9 @@ export default function SignUpPage() {
         </main>
 
         {/* Footer */}
-        <footer className="h-12 border-t border-[#e0e3e7]/80 dark:border-[#34373d]/80 bg-white/60 dark:bg-[#111318]/60 backdrop-blur-md px-6 lg:px-10 flex items-center justify-between text-xs text-[#747775] dark:text-[#8e9099] shrink-0">
+        <footer className="h-12 border-t border-white/20 dark:border-white/10 bg-white/30 dark:bg-[#0c0e14]/40 backdrop-blur-md px-6 lg:px-10 flex items-center justify-between text-2xs text-[#747775] dark:text-[#8e9099] shrink-0">
           <div>PACT • Onboarding Profile Calibration</div>
-          <div className="hidden sm:block">Preferences stored with Cloud Firebase protection</div>
+          <div>Preferences stored with Cloud Firebase protection</div>
         </footer>
       </div>
     </div>

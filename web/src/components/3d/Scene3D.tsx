@@ -4,44 +4,36 @@ import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
-import gsap from "gsap";
 
 export interface Scene3DProps {
   mode?: "landing" | "login" | "signup";
-  activeSection?: number;
   className?: string;
   interactive?: boolean;
 }
 
 export const Scene3D: React.FC<Scene3DProps> = ({
   mode = "landing",
-  activeSection = 0,
   className = "",
   interactive = true,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // References to 3D objects and subsystems
+  // Core Three.js references
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
-  const cardsMixerRef = useRef<THREE.AnimationMixer | null>(null);
-
-  // 3D Model Group Refs
   const jellyfishGroupRef = useRef<THREE.Group | null>(null);
-  const rocketGroupRef = useRef<THREE.Group | null>(null);
-  const cardsGroupRef = useRef<THREE.Group | null>(null);
-  const lightningGroupRef = useRef<THREE.Group | null>(null);
-  const heartGroupRef = useRef<THREE.Group | null>(null);
-  const eyeGroupRef = useRef<THREE.Group | null>(null);
-  const cloudsGroupRef = useRef<THREE.Group | null>(null);
-  const plugGroupRef = useRef<THREE.Group | null>(null);
-  const sphereGroupRef = useRef<THREE.Group | null>(null);
 
   // Mouse coordinates with damped interpolation
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
+
+  // Mode reference for smooth animation transitions inside render loop
+  const modeRef = useRef(mode);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -51,17 +43,14 @@ export const Scene3D: React.FC<Scene3DProps> = ({
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // Clean subtle depth fog matching M3 canvas palette
-    scene.fog = new THREE.FogExp2(0x0a101d, 0.028);
-
     // 2. Camera Setup
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
-    const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    camera.position.set(0, 0, 8.2);
+    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
+    camera.position.set(0, 0, 7.8);
     cameraRef.current = camera;
 
-    // 3. High-Performance WebGL Renderer
+    // 3. Ultra-Smooth High-Performance WebGL Renderer
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
@@ -70,55 +59,50 @@ export const Scene3D: React.FC<Scene3DProps> = ({
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.3;
+    renderer.toneMappingExposure = 1.35;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 4. M3 Lighting System (DESIGN.md Tokens)
-    // Primary Brand Blue Key Light (#0b57d0 / #4285f4)
-    const primaryKeyLight = new THREE.DirectionalLight(0x4285f4, 3.2);
-    primaryKeyLight.position.set(6, 7, 7);
-    scene.add(primaryKeyLight);
+    // 4. Clean Sky Blue & M3 Underwater Lighting System
+    // Ambient aquatic deep glow
+    const ambientLight = new THREE.AmbientLight(0x0a2240, 2.4);
+    scene.add(ambientLight);
 
-    // Ethereal Sky Blue Ambient Fill (#38bdf8 / #7dd3fc)
-    const skyBlueAmbient = new THREE.AmbientLight(0x0e2a47, 2.0);
-    scene.add(skyBlueAmbient);
+    // Primary Directional Sky-Blue Sunlight shining down into water
+    const sunLight = new THREE.DirectionalLight(0x38bdf8, 3.8);
+    sunLight.position.set(4, 8, 6);
+    scene.add(sunLight);
 
-    // Sky Blue Rim Light for Jellyfish Translucency
-    const skyBlueRimLight = new THREE.DirectionalLight(0x38bdf8, 3.0);
-    skyBlueRimLight.position.set(-6, -2, -3);
-    scene.add(skyBlueRimLight);
+    // Bioluminescent cyan rim light from below/behind
+    const rimLight = new THREE.DirectionalLight(0x00e5ff, 2.8);
+    rimLight.position.set(-5, -4, -3);
+    scene.add(rimLight);
 
-    // M3 Warning / Clearance Warm Gold Accent (#f9ab00 / #b06000)
-    const warmGoldAccent = new THREE.PointLight(0xf9ab00, 2.2, 16);
-    warmGoldAccent.position.set(3, -2, 4);
-    scene.add(warmGoldAccent);
+    // Subtle soft fill light
+    const fillLight = new THREE.PointLight(0x8ab4f8, 2.0, 16);
+    fillLight.position.set(0, -1, 4);
+    scene.add(fillLight);
 
-    // M3 Success Green Subtle Fill (#146c2e / #34a853)
-    const greenAccent = new THREE.PointLight(0x34a853, 1.8, 14);
-    greenAccent.position.set(-3, 3, 2);
-    scene.add(greenAccent);
-
-    // 5. Draco and GLTF Loaders
+    // 5. Draco & GLTF Loaders
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath("/draco/");
 
     const gltfLoader = new GLTFLoader();
     gltfLoader.setDRACOLoader(dracoLoader);
 
-    // 6. Load Jellyfish.glb (The Star Hero - Sky Blue Bioluminescent)
+    // 6. Only Jellyfish Model Group
     const jellyfishGroup = new THREE.Group();
     scene.add(jellyfishGroup);
     jellyfishGroupRef.current = jellyfishGroup;
-    jellyfishGroup.scale.setScalar(0.7);
+    jellyfishGroup.scale.setScalar(0.75);
 
     gltfLoader.load(
       "/models/Jellyfish.glb",
       (gltf) => {
         const model = gltf.scene;
 
-        // Apply vibrant Sky Blue Translucent PBR Material as requested
+        // Custom Realistic Translucent Sky Blue Material
         model.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
@@ -127,29 +111,29 @@ export const Scene3D: React.FC<Scene3DProps> = ({
 
             mesh.material = new THREE.MeshPhysicalMaterial({
               color: new THREE.Color(0x38bdf8), // Sky Blue (Tailwind sky-400)
-              emissive: new THREE.Color(0x0284c7), // Deep sky blue glow
-              emissiveIntensity: 0.55,
-              roughness: 0.12,
+              emissive: new THREE.Color(0x0284c7), // Glowing Sky Blue
+              emissiveIntensity: 0.58,
+              roughness: 0.1,
               metalness: 0.05,
-              transmission: 0.72,
-              thickness: 1.4,
-              ior: 1.33,
+              transmission: 0.78, // High glass translucency so it glows beautifully
+              thickness: 1.6,
+              ior: 1.333, // Water refractive index
               transparent: true,
-              opacity: 0.88,
-              clearcoat: 0.8,
-              clearcoatRoughness: 0.1,
+              opacity: 0.9,
+              clearcoat: 0.85,
+              clearcoatRoughness: 0.08,
             });
           }
         });
 
         jellyfishGroup.add(model);
 
-        // Play the embedded natural swimming movement animation
+        // Embedded swimming skeletal armature animation
         if (gltf.animations && gltf.animations.length > 0) {
           const mixer = new THREE.AnimationMixer(model);
           const clip = gltf.animations[0];
           const action = mixer.clipAction(clip);
-          action.setEffectiveTimeScale(0.8); // Silky hypnotic natural cadence
+          action.setEffectiveTimeScale(0.72); // Silky, organic swimming tempo
           action.play();
           mixerRef.current = mixer;
         }
@@ -160,206 +144,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({
       (err) => console.warn("Jellyfish load note:", err)
     );
 
-    // 7. Load Rocket.glb (Executive Propulsion / Velocity)
-    const rocketGroup = new THREE.Group();
-    scene.add(rocketGroup);
-    rocketGroupRef.current = rocketGroup;
-
-    gltfLoader.load(
-      "/models/Rocket.glb",
-      (gltf) => {
-        const model = gltf.scene;
-        model.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.material = new THREE.MeshStandardMaterial({
-              color: new THREE.Color(0x0b57d0), // M3 Primary Blue
-              roughness: 0.2,
-              metalness: 0.85,
-            });
-          }
-        });
-        model.scale.setScalar(0.012);
-        rocketGroup.add(model);
-        rocketGroup.position.set(-3.2, -1.2, 0.4);
-        rocketGroup.rotation.set(-0.25, 0.7, 0.3);
-      },
-      undefined,
-      (err) => console.warn("Rocket load note:", err)
-    );
-
-    // 8. Load Cards2Anim.glb (Workspace 3D Animated Ecosystem Cards)
-    const cardsGroup = new THREE.Group();
-    scene.add(cardsGroup);
-    cardsGroupRef.current = cardsGroup;
-
-    gltfLoader.load(
-      "/models/Cards2Anim.glb",
-      (gltf) => {
-        const model = gltf.scene;
-        model.scale.setScalar(0.0075);
-        cardsGroup.add(model);
-
-        if (gltf.animations && gltf.animations.length > 0) {
-          const mixer = new THREE.AnimationMixer(model);
-          gltf.animations.forEach((clip) => {
-            const action = mixer.clipAction(clip);
-            action.setEffectiveTimeScale(0.65);
-            action.play();
-          });
-          cardsMixerRef.current = mixer;
-        }
-
-        cardsGroup.position.set(-2.6, 1.4, -0.2);
-        cardsGroup.rotation.set(0.15, 0.35, -0.05);
-      },
-      undefined,
-      (err) => console.warn("Cards2Anim load note:", err)
-    );
-
-    // 9. Load Lightning.glb (Speed & Action Execution Icon - M3 Gold)
-    const lightningGroup = new THREE.Group();
-    scene.add(lightningGroup);
-    lightningGroupRef.current = lightningGroup;
-
-    gltfLoader.load(
-      "/models/lightning.glb",
-      (gltf) => {
-        const model = gltf.scene;
-        model.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.material = new THREE.MeshStandardMaterial({
-              color: new THREE.Color(0xf9ab00), // M3 Warning Gold
-              emissive: new THREE.Color(0xb06000),
-              emissiveIntensity: 0.65,
-              roughness: 0.15,
-              metalness: 0.8,
-            });
-          }
-        });
-        model.scale.setScalar(0.011);
-        lightningGroup.add(model);
-        lightningGroup.position.set(3.0, -1.8, 0.5);
-      },
-      undefined,
-      (err) => console.warn("Lightning load note:", err)
-    );
-
-    // 10. Load Heart.glb (Health & Schedule Integrity - M3 Success Green)
-    const heartGroup = new THREE.Group();
-    scene.add(heartGroup);
-    heartGroupRef.current = heartGroup;
-
-    gltfLoader.load(
-      "/models/heart.glb",
-      (gltf) => {
-        const model = gltf.scene;
-        model.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.material = new THREE.MeshStandardMaterial({
-              color: new THREE.Color(0x34a853), // M3 Success Green
-              emissive: new THREE.Color(0x146c2e),
-              emissiveIntensity: 0.5,
-              roughness: 0.2,
-              metalness: 0.6,
-            });
-          }
-        });
-        model.scale.setScalar(0.009);
-        heartGroup.add(model);
-        heartGroup.position.set(2.8, 1.6, -0.4);
-      },
-      undefined,
-      (err) => console.warn("Heart load note:", err)
-    );
-
-    // 11. Load Eye.glb (Proactive Guarded Vision - M3 Dark Cobalt)
-    const eyeGroup = new THREE.Group();
-    scene.add(eyeGroup);
-    eyeGroupRef.current = eyeGroup;
-
-    gltfLoader.load(
-      "/models/Eye.glb",
-      (gltf) => {
-        const model = gltf.scene;
-        model.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.material = new THREE.MeshStandardMaterial({
-              color: new THREE.Color(0x041e49), // M3 On-Primary Container Navy
-              emissive: new THREE.Color(0x00b4d8),
-              emissiveIntensity: 0.4,
-              roughness: 0.15,
-              metalness: 0.7,
-            });
-          }
-        });
-        model.scale.setScalar(0.01);
-        eyeGroup.add(model);
-        eyeGroup.position.set(-3.2, 0.2, 0.2);
-      },
-      undefined,
-      (err) => console.warn("Eye load note:", err)
-    );
-
-    // 12. Load Clouds.glb (Ambient Depth Atmosphere)
-    const cloudsGroup = new THREE.Group();
-    scene.add(cloudsGroup);
-    cloudsGroupRef.current = cloudsGroup;
-
-    gltfLoader.load(
-      "/models/Clouds.glb",
-      (gltf) => {
-        const model = gltf.scene;
-        model.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.material = new THREE.MeshStandardMaterial({
-              color: new THREE.Color(0xc2e7ff), // M3 Active Pill Light Blue
-              transparent: true,
-              opacity: 0.4,
-              roughness: 0.8,
-            });
-          }
-        });
-        model.scale.setScalar(0.015);
-        cloudsGroup.add(model);
-        cloudsGroup.position.set(0, -2.4, -2.5);
-      },
-      undefined,
-      (err) => console.warn("Clouds load note:", err)
-    );
-
-    // 13. Load Plug.glb (Integration Protocol)
-    const plugGroup = new THREE.Group();
-    scene.add(plugGroup);
-    plugGroupRef.current = plugGroup;
-
-    gltfLoader.load(
-      "/models/Plug.glb",
-      (gltf) => {
-        const model = gltf.scene;
-        model.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.material = new THREE.MeshStandardMaterial({
-              color: new THREE.Color(0x8ab4f8),
-              roughness: 0.3,
-              metalness: 0.8,
-            });
-          }
-        });
-        model.scale.setScalar(0.009);
-        plugGroup.add(model);
-        plugGroup.position.set(3.4, 0.4, -0.6);
-      },
-      undefined,
-      (err) => console.warn("Plug load note:", err)
-    );
-
-    // 14. Mouse Tracking for Subtle Parallax
+    // 7. Mouse Listener
     const handleMouseMove = (e: MouseEvent) => {
       if (!interactive) return;
       const x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -370,7 +155,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
 
-    // 15. Window Resize Handler
+    // 8. Window Resize Listener
     const handleResize = () => {
       if (!container || !rendererRef.current || !cameraRef.current) return;
       const w = container.clientWidth || window.innerWidth;
@@ -382,131 +167,85 @@ export const Scene3D: React.FC<Scene3DProps> = ({
 
     window.addEventListener("resize", handleResize);
 
-    // 16. Autonomous Ocean Simulation Render Loop
+    // 9. Autonomous Dynamic Water Simulation Loop
     const clock = new THREE.Clock();
     let animationFrameId: number;
+
+    // Swimming path memory
+    let prevX = 0;
+    let prevY = 0;
+    let currentLaneX = mode === "landing" ? 0.3 : 2.2;
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
       const delta = clock.getDelta();
       const t = clock.getElapsedTime();
 
-      // Update Skeletal Animations
+      // Update skeletal swimming contraction
       if (mixerRef.current) mixerRef.current.update(delta);
-      if (cardsMixerRef.current) cardsMixerRef.current.update(delta);
 
-      // Smooth Mouse Damping
-      mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.04;
-      mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.04;
+      // Smooth cursor damping
+      mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.035;
+      mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.035;
 
-      // AUTONOMOUS JELLYFISH MOVEMENT (Moving on its own, like swimming in water)
       if (jellyfishGroupRef.current) {
         const jf = jellyfishGroupRef.current;
 
-        // Base lane coordinates depending on route mode
-        let laneOffsetX = 1.6;
-        let laneOffsetY = 0.1;
-        let laneOffsetZ = 0.3;
+        // Smoothly interpolate lane when transitioning between screens:
+        // Landing: centered aquatic roaming (x ~ 0.2)
+        // Login / Signup: swims to the right side (x ~ 2.2)
+        const targetLaneX = modeRef.current === "landing" ? 0.3 : 2.2;
+        currentLaneX += (targetLaneX - currentLaneX) * 0.03;
 
-        if (mode === "login") {
-          laneOffsetX = -2.2;
-          laneOffsetY = 0.2;
-        } else if (mode === "signup") {
-          laneOffsetX = 2.4;
-          laneOffsetY = -0.1;
-        } else if (activeSection >= 3) {
-          // In the last section, drift off to the upper-right background so it never blocks text
-          laneOffsetX = 2.6;
-          laneOffsetY = 1.2;
-          laneOffsetZ = -1.2;
-        }
+        // REALISTIC UNDERWATER SWIMMING PHYSICS:
+        // 1. Multi-harmonic circular & figure-8 water current drift (sometimes slow, sometimes fast)
+        const currentSpeed = 0.35 + Math.sin(t * 0.25) * 0.15; // Speed dynamically varies!
+        const orbitT = t * currentSpeed;
 
-        // Multi-frequency fluid sinusoidal ocean drift
-        const waveX = Math.sin(t * 0.42) * 1.35 + Math.sin(t * 0.9) * 0.4;
-        const waveY = Math.cos(t * 0.55) * 0.85 + Math.sin(t * 1.1) * 0.35;
-        const waveZ = Math.sin(t * 0.3) * 0.6;
+        // Gentle circular loops through 3D water
+        const circularX = Math.cos(orbitT * 0.6) * 1.6 + Math.sin(orbitT * 1.2) * 0.5;
+        const circularY = Math.sin(orbitT * 0.8) * 1.0 + Math.cos(orbitT * 0.4) * 0.4;
+        const circularZ = Math.sin(orbitT * 0.5) * 0.7;
 
-        // Apply autonomous swimming position
-        jf.position.x = laneOffsetX + waveX;
-        jf.position.y = laneOffsetY + waveY;
-        jf.position.z = laneOffsetZ + waveZ;
+        // 2. Jet propulsion burst: Real jellyfish speed up during contraction, then glide!
+        const propulsionCycle = (t * 2.1) % (Math.PI * 2);
+        const isContracting = propulsionCycle < Math.PI * 0.8;
+        const thrust = isContracting ? Math.sin(propulsionCycle) * 0.18 : Math.sin(propulsionCycle) * 0.05;
 
-        // Natural banking, tilting, and steering in direction of movement
-        const targetPitch = Math.cos(t * 0.55) * 0.22 + mouseRef.current.y * 0.15;
-        const targetRoll = Math.sin(t * 0.42) * 0.25 - mouseRef.current.x * 0.15;
-        const targetYaw = (mode === "login" ? 0.5 : mode === "signup" ? -0.5 : -0.2) + Math.sin(t * 0.3) * 0.3;
+        // Target 3D coordinates
+        const targetX = currentLaneX + circularX + mouseRef.current.x * 0.4;
+        const targetY = circularY + thrust + mouseRef.current.y * 0.3;
+        const targetZ = circularZ + 0.2;
 
-        jf.rotation.x += (targetPitch - jf.rotation.x) * 0.04;
-        jf.rotation.z += (targetRoll - jf.rotation.z) * 0.04;
-        jf.rotation.y += (targetYaw - jf.rotation.y) * 0.04;
+        // Smooth fluid motion integration (momentum & inertia)
+        jf.position.x += (targetX - jf.position.x) * 0.04;
+        jf.position.y += (targetY - jf.position.y) * 0.04;
+        jf.position.z += (targetZ - jf.position.z) * 0.04;
 
-        // Subtle thrust propulsion pulse
-        const pulse = 1 + Math.sin(t * 1.6) * 0.035;
-        jf.scale.set(0.7 * pulse, 0.7 * pulse, 0.7 * pulse);
+        // 3. Orientation / Banking: Head leads the movement!
+        const velX = jf.position.x - prevX;
+        const velY = jf.position.y - prevY;
+        prevX = jf.position.x;
+        prevY = jf.position.y;
+
+        // Natural tilt in the direction of swimming
+        const naturalPitch = velY * 2.5 + Math.sin(t * 0.8) * 0.15;
+        const naturalRoll = -velX * 2.2 + Math.cos(t * 0.7) * 0.12;
+        const naturalYaw = (modeRef.current === "landing" ? 0.0 : -0.3) + Math.sin(t * 0.4) * 0.25;
+
+        jf.rotation.x += (naturalPitch - jf.rotation.x) * 0.04;
+        jf.rotation.z += (naturalRoll - jf.rotation.z) * 0.04;
+        jf.rotation.y += (naturalYaw - jf.rotation.y) * 0.04;
+
+        // 4. Natural Bell Breathing Pulse (scale pulse matches propulsion)
+        const bellExpansion = 1 + (isContracting ? -0.03 : 0.04) * Math.sin(propulsionCycle);
+        jf.scale.set(0.75 * bellExpansion, 0.75 * (2 - bellExpansion), 0.75 * bellExpansion);
       }
 
-      // ROCKET HOVER & ORBIT
-      if (rocketGroupRef.current) {
-        const rocket = rocketGroupRef.current;
-        rocket.position.y = -1.2 + Math.sin(t * 1.4) * 0.25;
-        rocket.rotation.y += 0.008;
-        rocket.rotation.z = Math.sin(t * 1.2) * 0.12;
-      }
-
-      // 3D CARDS HOVER
-      if (cardsGroupRef.current) {
-        const cards = cardsGroupRef.current;
-        cards.position.y = 1.4 + Math.sin(t * 1.1) * 0.18;
-        cards.rotation.y = 0.35 + Math.sin(t * 0.6) * 0.08 + mouseRef.current.x * 0.12;
-      }
-
-      // LIGHTNING PULSE & ROTATION
-      if (lightningGroupRef.current) {
-        const lt = lightningGroupRef.current;
-        lt.rotation.y += 0.018;
-        lt.position.y = -1.8 + Math.sin(t * 2.2) * 0.2;
-      }
-
-      // HEART RHYTHMIC CARDIAC BEAT
-      if (heartGroupRef.current) {
-        const ht = heartGroupRef.current;
-        ht.position.y = 1.6 + Math.cos(t * 1.3) * 0.15;
-        // Double heartbeat impulse
-        const beatTime = t * 2.5;
-        const beatCycle = beatTime % (Math.PI * 2);
-        const isPulse = beatCycle < 0.6 || (beatCycle > 1.0 && beatCycle < 1.4);
-        const beatScale = isPulse ? 1.12 : 1.0;
-        ht.scale.setScalar(0.009 * beatScale);
-        ht.rotation.y += 0.006;
-      }
-
-      // EYE PROACTIVE TRACKING
-      if (eyeGroupRef.current) {
-        const eye = eyeGroupRef.current;
-        eye.position.y = 0.2 + Math.sin(t * 0.8) * 0.15;
-        // Smoothly orient towards mouse cursor
-        eye.rotation.y += (mouseRef.current.x * 0.6 - eye.rotation.y) * 0.05;
-        eye.rotation.x += (-mouseRef.current.y * 0.4 - eye.rotation.x) * 0.05;
-      }
-
-      // CLOUDS SLOW DRIFT
-      if (cloudsGroupRef.current) {
-        const clouds = cloudsGroupRef.current;
-        clouds.position.x = Math.sin(t * 0.15) * 0.8;
-      }
-
-      // PLUG CONNECTION TUMBLE
-      if (plugGroupRef.current) {
-        const plug = plugGroupRef.current;
-        plug.rotation.x += 0.006;
-        plug.rotation.y += 0.01;
-        plug.position.y = 0.4 + Math.cos(t * 1.5) * 0.16;
-      }
-
-      // CAMERA DAMPED PARALLAX
+      // Camera subtle parallax
       if (cameraRef.current) {
-        cameraRef.current.position.x += (mouseRef.current.x * 0.3 - cameraRef.current.position.x) * 0.03;
-        cameraRef.current.position.y += (mouseRef.current.y * 0.2 - cameraRef.current.position.y) * 0.03;
+        cameraRef.current.position.x += (mouseRef.current.x * 0.25 - cameraRef.current.position.x) * 0.03;
+        cameraRef.current.position.y += (mouseRef.current.y * 0.18 - cameraRef.current.position.y) * 0.03;
         cameraRef.current.lookAt(0, 0, 0);
       }
 
@@ -515,7 +254,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({
 
     animate();
 
-    // 17. Cleanup
+    // 10. Cleanup
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("mousemove", handleMouseMove);
@@ -527,20 +266,6 @@ export const Scene3D: React.FC<Scene3DProps> = ({
       renderer.dispose();
       dracoLoader.dispose();
     };
-  }, [mode, activeSection]);
-
-  // Smooth mode transition orchestration
-  useEffect(() => {
-    if (!cameraRef.current) return;
-    const camera = cameraRef.current;
-
-    if (mode === "login") {
-      gsap.to(camera.position, { x: 0, y: 0, z: 7.8, duration: 1.0, ease: "power2.out" });
-    } else if (mode === "signup") {
-      gsap.to(camera.position, { x: 0, y: 0, z: 7.8, duration: 1.0, ease: "power2.out" });
-    } else {
-      gsap.to(camera.position, { x: 0, y: 0, z: 8.2, duration: 1.0, ease: "power2.out" });
-    }
   }, [mode]);
 
   return (

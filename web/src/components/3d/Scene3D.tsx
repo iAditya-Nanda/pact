@@ -50,11 +50,11 @@ export const Scene3D: React.FC<Scene3DProps> = ({
     camera.position.set(0, 0, 7.8);
     cameraRef.current = camera;
 
-    // 3. Ultra-Smooth High-Performance WebGL Renderer
+    // 3. Ultra-Smooth High-Performance WebGL Renderer (compatible with all GPUs & laptops)
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
-      powerPreference: "high-performance",
+      powerPreference: "default",
     });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -112,16 +112,15 @@ export const Scene3D: React.FC<Scene3DProps> = ({
             mesh.material = new THREE.MeshPhysicalMaterial({
               color: new THREE.Color(0x38bdf8), // Sky Blue (Tailwind sky-400)
               emissive: new THREE.Color(0x0284c7), // Glowing Sky Blue
-              emissiveIntensity: 0.65,
-              roughness: 0.08,
-              metalness: 0.02,
-              transmission: 0.82, // High glass translucency so it glows beautifully
-              thickness: 1.4,
-              ior: 1.333, // Water refractive index
+              emissiveIntensity: 0.75,
+              roughness: 0.1,
+              metalness: 0.05,
               transparent: true,
-              opacity: 0.92,
-              clearcoat: 0.9,
-              clearcoatRoughness: 0.05,
+              opacity: 0.90,
+              clearcoat: 1.0,
+              clearcoatRoughness: 0.08,
+              depthWrite: true,
+              side: THREE.DoubleSide,
             });
           }
         });
@@ -173,7 +172,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({
     let animationFrameId: number;
 
     const baseScale = 0.68;
-    let currentLaneX = mode === "landing" ? 2.2 : 1.15;
+    let currentLaneX = mode === "landing" ? 1.45 : 1.15;
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -194,8 +193,11 @@ export const Scene3D: React.FC<Scene3DProps> = ({
       if (jellyfishGroupRef.current) {
         const jf = jellyfishGroupRef.current;
 
-        // Smooth transition between screens (Landing = 0.0, Login/Signup = 1.15)
-        const targetLaneX = modeRef.current === "landing" ? 2.2 : 1.15;
+        // Dynamic responsive right position based on actual screen aspect ratio:
+        // Ensures model stays visible on standard 13-15" laptop screens without being pushed off
+        const aspect = cameraRef.current?.aspect || 1.6;
+        const responsiveLandingX = aspect >= 1.6 ? 1.5 : Math.max(0.85, (aspect - 1.0) * 0.8 + 0.85);
+        const targetLaneX = modeRef.current === "landing" ? responsiveLandingX : 1.15;
         currentLaneX += (targetLaneX - currentLaneX) * 0.035;
 
         // 1. Calm 3.4-second biological breathing cycle
@@ -258,7 +260,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`fixed inset-0 pointer-events-none z-0 overflow-hidden ${className}`}
+      className={`fixed inset-0 pointer-events-none z-[2] overflow-hidden ${className}`}
       aria-hidden="true"
     />
   );

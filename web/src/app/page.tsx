@@ -53,7 +53,7 @@ export default function LandingPage() {
         <Scene3D mode="landing" />
 
         {/* Subtle Ambient Vignette Layer - Ultra-Clear for Jellyfish Visibility */}
-        <div className="fixed inset-0 pointer-events-none z-1 bg-gradient-to-b from-transparent via-transparent to-[#f8fafd]/25 dark:to-[#0c0e14]/30" />
+        <div className="fixed inset-0 pointer-events-none z-[3] bg-gradient-to-b from-transparent via-transparent to-[#f8fafd]/25 dark:to-[#0c0e14]/30" />
 
         {/* Main Content Container with Slide Transitions */}
         <div ref={mainRef} className="relative z-10 flex flex-col min-h-screen">

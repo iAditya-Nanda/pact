@@ -45,7 +45,7 @@ export const WorkspaceWindow: React.FC<WorkspaceWindowProps> = ({
   onAddTask,
 }) => {
   return (
-    <div className="h-full flex flex-col rounded-2xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] shadow-2xl overflow-hidden text-[#1f1f1f] dark:text-[#e2e2e6] transition-all">
+    <div className="h-full flex flex-col rounded-2xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] shadow-2xl overflow-hidden text-[#1f1f1f] dark:text-[#e2e2e6] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
       {/* macOS Window Title Bar */}
       <div className="h-11 px-4 bg-[#f0f4f9] dark:bg-[#16181d] border-b border-[#e0e3e7] dark:border-[#34373d] flex items-center justify-between shrink-0 select-none">
         {/* Left: macOS Traffic Lights */}
@@ -53,7 +53,7 @@ export const WorkspaceWindow: React.FC<WorkspaceWindowProps> = ({
           {/* Red: Close */}
           <button
             onClick={onClose}
-            className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] hover:brightness-90 flex items-center justify-center transition-all cursor-pointer"
+            className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] hover:brightness-90 active:scale-90 flex items-center justify-center transition-all cursor-pointer"
             title="Close Window (Return to Dashboard)"
           >
             <X className="w-2 h-2 text-[#4a0002] opacity-0 group-hover/lights:opacity-100 transition-opacity" />
@@ -62,7 +62,7 @@ export const WorkspaceWindow: React.FC<WorkspaceWindowProps> = ({
           {/* Yellow: Minimize */}
           <button
             onClick={onMinimize}
-            className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] hover:brightness-90 flex items-center justify-center transition-all cursor-pointer"
+            className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] hover:brightness-90 active:scale-90 flex items-center justify-center transition-all cursor-pointer"
             title="Minimize Window"
           >
             <Minus className="w-2 h-2 text-[#5c3a00] opacity-0 group-hover/lights:opacity-100 transition-opacity" />
@@ -71,7 +71,7 @@ export const WorkspaceWindow: React.FC<WorkspaceWindowProps> = ({
           {/* Green: Maximize / Split */}
           <button
             onClick={onToggleMaximize}
-            className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] hover:brightness-90 flex items-center justify-center transition-all cursor-pointer"
+            className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] hover:brightness-90 active:scale-90 flex items-center justify-center transition-all cursor-pointer"
             title={isMaximized ? "Restore Split View" : "Full Screen Window"}
           >
             {isMaximized ? (
@@ -87,9 +87,9 @@ export const WorkspaceWindow: React.FC<WorkspaceWindowProps> = ({
           {/* Gmail Tab */}
           <button
             onClick={() => onChangeTab("gmail")}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all duration-200 active:scale-95 cursor-pointer ${
               activeTab === "gmail"
-                ? "bg-[#0b57d0] text-white shadow-2xs"
+                ? "bg-[#0b57d0] text-white shadow-2xs font-bold"
                 : "text-[#747775] dark:text-[#8e9099] hover:text-[#1f1f1f] dark:hover:text-white"
             }`}
           >
@@ -111,9 +111,9 @@ export const WorkspaceWindow: React.FC<WorkspaceWindowProps> = ({
           {/* Calendar Tab */}
           <button
             onClick={() => onChangeTab("calendar")}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all duration-200 active:scale-95 cursor-pointer ${
               activeTab === "calendar"
-                ? "bg-[#0b57d0] text-white shadow-2xs"
+                ? "bg-[#0b57d0] text-white shadow-2xs font-bold"
                 : "text-[#747775] dark:text-[#8e9099] hover:text-[#1f1f1f] dark:hover:text-white"
             }`}
           >
@@ -135,9 +135,9 @@ export const WorkspaceWindow: React.FC<WorkspaceWindowProps> = ({
           {/* Tasks Tab */}
           <button
             onClick={() => onChangeTab("tasks")}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+            className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all duration-200 active:scale-95 cursor-pointer ${
               activeTab === "tasks"
-                ? "bg-[#0b57d0] text-white shadow-2xs"
+                ? "bg-[#0b57d0] text-white shadow-2xs font-bold"
                 : "text-[#747775] dark:text-[#8e9099] hover:text-[#1f1f1f] dark:hover:text-white"
             }`}
           >
@@ -164,43 +164,49 @@ export const WorkspaceWindow: React.FC<WorkspaceWindowProps> = ({
         </div>
       </div>
 
-      {/* Main Window Tab Content */}
+      {/* Main Window Tab Content with Smooth Tab Switch Transitions */}
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {activeTab === "gmail" && (
-          <GmailView
-            emails={workspace.emails || []}
-            unreadCount={workspace.metrics.unreadEmails}
-            userEmail={userEmail}
-            onRefresh={onRefreshWorkspace}
-            isRefreshing={isRefreshing}
-            onAskAiAboutEmail={onAskAiAboutEmail}
-          />
+          <div key="gmail" className="h-full w-full animate-tab-switch">
+            <GmailView
+              emails={workspace.emails || []}
+              unreadCount={workspace.metrics.unreadEmails}
+              userEmail={userEmail}
+              onRefresh={onRefreshWorkspace}
+              isRefreshing={isRefreshing}
+              onAskAiAboutEmail={onAskAiAboutEmail}
+            />
+          </div>
         )}
 
         {activeTab === "calendar" && (
-          <CalendarView
-            events={workspace.calendarEvents || []}
-            meetingsTodayCount={workspace.metrics.meetingsToday}
-            thisWeekHours={workspace.metrics.thisWeekHours}
-            conflictsCount={workspace.metrics.conflicts}
-            userEmail={userEmail}
-            onRefresh={onRefreshWorkspace}
-            isRefreshing={isRefreshing}
-            onResolveConflict={onResolveCalendarConflict}
-          />
+          <div key="calendar" className="h-full w-full animate-tab-switch">
+            <CalendarView
+              events={workspace.calendarEvents || []}
+              meetingsTodayCount={workspace.metrics.meetingsToday}
+              thisWeekHours={workspace.metrics.thisWeekHours}
+              conflictsCount={workspace.metrics.conflicts}
+              userEmail={userEmail}
+              onRefresh={onRefreshWorkspace}
+              isRefreshing={isRefreshing}
+              onResolveConflict={onResolveCalendarConflict}
+            />
+          </div>
         )}
 
         {activeTab === "tasks" && (
-          <TasksView
-            tasks={workspace.tasks || []}
-            activeTasksCount={workspace.metrics.activeTasks}
-            dueTodayCount={workspace.metrics.dueToday}
-            overdueCount={workspace.metrics.overdue}
-            userEmail={userEmail}
-            onRefresh={onRefreshWorkspace}
-            isRefreshing={isRefreshing}
-            onAddTask={onAddTask}
-          />
+          <div key="tasks" className="h-full w-full animate-tab-switch">
+            <TasksView
+              tasks={workspace.tasks || []}
+              activeTasksCount={workspace.metrics.activeTasks}
+              dueTodayCount={workspace.metrics.dueToday}
+              overdueCount={workspace.metrics.overdue}
+              userEmail={userEmail}
+              onRefresh={onRefreshWorkspace}
+              isRefreshing={isRefreshing}
+              onAddTask={onAddTask}
+            />
+          </div>
         )}
       </div>
     </div>

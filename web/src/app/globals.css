@@ -81,10 +81,79 @@ html.pact-theme-transitioning *::after {
   transition: none !important;
 }
 
+/* macOS Workspace Window Fluid Animations */
+@keyframes window-open {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes window-close {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateY(16px);
+  }
+}
+
+@keyframes tab-content-switch {
+  0% {
+    opacity: 0;
+    transform: scale(0.99) translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes dashboard-fade-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-window-open {
+  animation: window-open 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-window-close {
+  animation: window-close 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-tab-switch {
+  animation: tab-content-switch 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-dashboard-in {
+  animation: dashboard-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),
-  ::view-transition-new(*) {
+  ::view-transition-new(*),
+  .animate-window-open,
+  .animate-window-close,
+  .animate-tab-switch,
+  .animate-dashboard-in {
     animation: none !important;
   }
 }

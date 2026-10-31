@@ -51,6 +51,16 @@ export default function DashboardPage() {
   // Active in-app macOS workspace window ("gmail" | "calendar" | "tasks" | null)
   const [activeAppWindow, setActiveAppWindow] = useState<"gmail" | "calendar" | "tasks" | null>(null);
   const [isWindowMaximized, setIsWindowMaximized] = useState(false);
+  const [isWindowClosing, setIsWindowClosing] = useState(false);
+
+  const handleCloseWindow = () => {
+    setIsWindowClosing(true);
+    setTimeout(() => {
+      setActiveAppWindow(null);
+      setIsWindowClosing(false);
+      setIsWindowMaximized(false);
+    }, 200);
+  };
 
   // Spotlight 1-minute AI Executive Pitch Tour
   const [isTourOpen, setIsTourOpen] = useState(false);
@@ -828,24 +838,22 @@ export default function DashboardPage() {
       <main className="flex-1 flex flex-col justify-between px-4 lg:px-6 py-3.5 lg:py-4 gap-3 lg:gap-3.5 overflow-y-auto lg:overflow-hidden">
         {activeAppWindow ? (
           /* Split View: In-App macOS Workspace Window (Left) + AI Chat Panel (Right) */
-          <div className="flex-1 flex flex-col lg:flex-row gap-3.5 lg:gap-4 h-full min-h-0 overflow-hidden">
+          <div
+            className={`flex-1 flex flex-col lg:flex-row gap-3.5 lg:gap-4 h-full min-h-0 overflow-hidden ${
+              isWindowClosing ? "animate-window-close pointer-events-none" : "animate-window-open"
+            }`}
+          >
             {/* Left: macOS Workspace Window (expands to 100% if isWindowMaximized, else 68%) */}
             <div
-              className={`h-full transition-all duration-300 min-h-0 ${
+              className={`h-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] min-h-0 ${
                 isWindowMaximized ? "w-full" : "w-full lg:w-[68%]"
               }`}
             >
               <WorkspaceWindow
                 activeTab={activeAppWindow}
                 onChangeTab={(tab) => setActiveAppWindow(tab)}
-                onClose={() => {
-                  setActiveAppWindow(null);
-                  setIsWindowMaximized(false);
-                }}
-                onMinimize={() => {
-                  setActiveAppWindow(null);
-                  setIsWindowMaximized(false);
-                }}
+                onClose={handleCloseWindow}
+                onMinimize={handleCloseWindow}
                 isMaximized={isWindowMaximized}
                 onToggleMaximize={() => setIsWindowMaximized(!isWindowMaximized)}
                 workspace={workspace || defaultWorkspace}
@@ -870,29 +878,33 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* Right: AI Co-Pilot Panel (hidden if isWindowMaximized, else 32%) */}
-            {!isWindowMaximized && (
-              <div className="w-full lg:w-[32%] h-full min-h-0 flex flex-col">
-                <WorkspaceChatPanel
-                  activeApp={activeAppWindow}
-                  userFullName={displayName}
-                  aiMode={aiMode}
-                  onSelectAiMode={handleSelectAiMode}
-                  onSendMessage={executeChatCommand}
-                  messages={chatMessages}
-                  isLoading={chatLoading}
-                  isSpeaking={isSpeaking}
-                  isListening={isListening}
-                  onToggleListening={handleToggleVoiceInput}
-                  isAudioMuted={isAudioMuted}
-                  onToggleMute={handleToggleMute}
-                  onApproveAction={handleApproveHitlAction}
-                />
-              </div>
-            )}
+            {/* Right: AI Co-Pilot Panel (smoothly expands and collapses when maximized or split) */}
+            <div
+              className={`h-full min-h-0 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden ${
+                isWindowMaximized
+                  ? "w-0 opacity-0 pointer-events-none -mr-4 scale-95"
+                  : "w-full lg:w-[32%] opacity-100 scale-100"
+              }`}
+            >
+              <WorkspaceChatPanel
+                activeApp={activeAppWindow}
+                userFullName={displayName}
+                aiMode={aiMode}
+                onSelectAiMode={handleSelectAiMode}
+                onSendMessage={executeChatCommand}
+                messages={chatMessages}
+                isLoading={chatLoading}
+                isSpeaking={isSpeaking}
+                isListening={isListening}
+                onToggleListening={handleToggleVoiceInput}
+                isAudioMuted={isAudioMuted}
+                onToggleMute={handleToggleMute}
+                onApproveAction={handleApproveHitlAction}
+              />
+            </div>
           </div>
         ) : (
-          <>
+          <div className="flex-1 flex flex-col justify-between gap-3 lg:gap-3.5 min-h-0 animate-dashboard-in">
             {/* Upper Main Row: 60% Width for 3 Cards + 40% Width for Executive Panel */}
             <div className="flex flex-col lg:flex-row gap-3.5 lg:gap-4 items-stretch flex-1 min-h-0">
           {/* 3 Cards Container (Constrained to 60% Width as Requested) */}
@@ -981,7 +993,7 @@ export default function DashboardPage() {
               {workspace?.isLiveGoogleData ? (
                 <button
                   onClick={() => setActiveAppWindow("gmail")}
-                  className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
+                  className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] active:scale-[0.98] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
                 >
                   <span>Open Gmail</span>
                   <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
@@ -1082,7 +1094,7 @@ export default function DashboardPage() {
               {workspace?.isLiveGoogleData ? (
                 <button
                   onClick={() => setActiveAppWindow("calendar")}
-                  className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
+                  className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] active:scale-[0.98] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
                 >
                   <span>Open Calendar</span>
                   <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
@@ -1185,7 +1197,7 @@ export default function DashboardPage() {
               {workspace?.isLiveGoogleData ? (
                 <button
                   onClick={() => setActiveAppWindow("tasks")}
-                  className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
+                  className="w-full mt-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] active:scale-[0.98] py-2 px-3 font-semibold text-xs text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center justify-between shadow-2xs transition-all cursor-pointer group"
                 >
                   <span>Open Tasks</span>
                   <ExternalLink className="w-3.5 h-3.5 text-[#747775] dark:text-[#8e9099] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] transition-colors" />
@@ -1400,7 +1412,7 @@ export default function DashboardPage() {
                 className="relative group cursor-pointer"
                 title="Open Gmail In-App Window"
               >
-                <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+                <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 group-active:scale-90 transition-all">
                   <img
                     src="/icons/gmail.png"
                     alt="Gmail"
@@ -1420,7 +1432,7 @@ export default function DashboardPage() {
                 className="relative group cursor-pointer"
                 title="Open Calendar In-App Window"
               >
-                <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+                <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 group-active:scale-90 transition-all">
                   <img
                     src="/icons/calendar.png"
                     alt="Calendar"
@@ -1440,7 +1452,7 @@ export default function DashboardPage() {
                 className="relative group cursor-pointer"
                 title="Open Tasks In-App Window"
               >
-                <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 transition-transform">
+                <div className="w-9 h-9 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] flex items-center justify-center p-1.5 shadow-2xs group-hover:scale-105 group-active:scale-90 transition-all">
                   <img
                     src="/icons/tasks.svg"
                     alt="Tasks"
@@ -1619,7 +1631,7 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
-      </>
+      </div>
     )}
   </main>
 

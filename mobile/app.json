@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "PACT",
+    "slug": "pact",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "pact",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.aditya.pact",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.aditya.pact",
+      "googleServicesFile": "./google-services.json",
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "backgroundColor": "#f8fafd",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f8fafd",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 120
+        }
+      ],
+      "expo-asset"
+    ]
+  }
+}

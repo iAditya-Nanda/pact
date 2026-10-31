@@ -60,47 +60,50 @@ export default function LandingPage() {
           {/* Top Application Bar */}
           <Header onNavigate={navigateWithTransition} />
 
-          {/* SECTION 1: HERO CANVAS */}
-          <section className="min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-12 max-w-5xl mx-auto w-full pt-8 pb-16">
-            {/* Big Main Display Heading: P.A.C.T. */}
-            <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight leading-none mb-3">
-              <span className="bg-gradient-to-r from-[#0b57d0] via-[#1a73e8] to-[#38bdf8] bg-clip-text text-transparent dark:from-white dark:via-[#7dd3fc] dark:to-[#38bdf8]">
-                P.A.C.T.
-              </span>
-            </h1>
+          {/* SECTION 1: HERO CANVAS — Text Left, Jellyfish Right */}
+          <section className="min-h-[calc(100vh-4rem)] flex flex-col justify-center px-4 sm:px-6 lg:px-12 xl:px-20 max-w-7xl mx-auto w-full pt-8 pb-16">
+            {/* Two-column layout: text left ~55%, jellyfish fills the right via 3D canvas */}
+            <div className="w-full max-w-xl">
+              {/* Big Main Display Heading: P.A.C.T. */}
+              <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight leading-none mb-3 text-left">
+                <span className="bg-gradient-to-r from-[#0b57d0] via-[#1a73e8] to-[#38bdf8] bg-clip-text text-transparent dark:from-white dark:via-[#7dd3fc] dark:to-[#38bdf8]">
+                  P.A.C.T.
+                </span>
+              </h1>
 
-            {/* Full Form */}
-            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#1f1f1f] dark:text-white tracking-tight mb-4">
-              Proactive Agent for{" "}
-              <span className="text-[#0b57d0] dark:text-[#38bdf8]">
-                Coordinated Tasks
-              </span>
-            </h2>
+              {/* Full Form */}
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#1f1f1f] dark:text-white tracking-tight mb-4 text-left">
+                Proactive Agent for{" "}
+                <span className="text-[#0b57d0] dark:text-[#38bdf8]">
+                  Coordinated Tasks
+                </span>
+              </h2>
 
-            {/* Subtitle / Core Executive Value */}
-            <p className="text-base sm:text-lg text-[#444746] dark:text-[#c4c6cf] max-w-2xl font-normal leading-relaxed mb-10">
-              Autonomous cross-app executive operating system orchestrating Gmail, Google Calendar, and Tasks with verified tool execution, schedule defense, and guarded human clearance.
-            </p>
+              {/* Subtitle / Core Executive Value */}
+              <p className="text-base sm:text-lg text-[#444746] dark:text-[#c4c6cf] max-w-lg font-normal leading-relaxed mb-10 text-left">
+                Autonomous cross-app executive operating system orchestrating Gmail, Google Calendar, and Tasks with verified tool execution, schedule defense, and guarded human clearance.
+              </p>
 
-            {/* Action Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full sm:w-auto mb-16">
-              <button
-                onClick={() => navigateWithTransition("/sign-up")}
-                className="w-full sm:w-auto px-7 py-3 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] active:scale-98 text-white font-semibold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer group"
-              >
-                <span>Get Started</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </button>
+              {/* Action Controls */}
+              <div className="flex flex-col sm:flex-row items-start gap-3.5 w-full sm:w-auto mb-16">
+                <button
+                  onClick={() => navigateWithTransition("/sign-up")}
+                  className="w-full sm:w-auto px-7 py-3 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] active:scale-98 text-white font-semibold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer group"
+                >
+                  <span>Get Started</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </button>
 
-              <button
-                onClick={() => navigateWithTransition("/login")}
-                className="w-full sm:w-auto px-7 py-3 rounded-full bg-white/[0.08] dark:bg-white/[0.04] backdrop-blur-md hover:bg-white/[0.15] dark:hover:bg-white/[0.08] active:scale-98 border border-white/30 dark:border-white/10 text-[#1f1f1f] dark:text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center cursor-pointer"
-              >
-                <span>Executive Login</span>
-              </button>
+                <button
+                  onClick={() => navigateWithTransition("/login")}
+                  className="w-full sm:w-auto px-7 py-3 rounded-full bg-white/[0.08] dark:bg-white/[0.04] backdrop-blur-md hover:bg-white/[0.15] dark:hover:bg-white/[0.08] active:scale-98 border border-white/30 dark:border-white/10 text-[#1f1f1f] dark:text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center cursor-pointer"
+                >
+                  <span>Executive Login</span>
+                </button>
+              </div>
             </div>
 
-            {/* 3 Ultra-Transparent Glassmorphic KPI Cards - Jellyfish Clearly Visible Behind */}
+            {/* 3 Ultra-Transparent Glassmorphic KPI Cards — full width row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl text-left">
               {/* Card 1: Schedule Integrity */}
               <div className="rounded-2xl bg-white/[0.08] dark:bg-white/[0.03] backdrop-blur-md border border-white/30 dark:border-white/10 p-5 flex items-center gap-4 shadow-md hover:border-white/50 dark:hover:border-white/20 transition-all">
@@ -149,7 +152,7 @@ export default function LandingPage() {
             </div>
 
             {/* Scroll Indicator */}
-            <div className="mt-14 flex flex-col items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
+            <div className="mt-14 flex flex-col items-start gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
               <span className="text-3xs font-semibold uppercase tracking-wider text-[#747775] dark:text-[#8e9099]">
                 Scroll to view system
               </span>

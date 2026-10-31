@@ -173,7 +173,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({
     let animationFrameId: number;
 
     const baseScale = 0.68;
-    let currentLaneX = mode === "landing" ? 0.0 : 1.15;
+    let currentLaneX = mode === "landing" ? 2.2 : 1.15;
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -195,7 +195,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({
         const jf = jellyfishGroupRef.current;
 
         // Smooth transition between screens (Landing = 0.0, Login/Signup = 1.15)
-        const targetLaneX = modeRef.current === "landing" ? 0.0 : 1.15;
+        const targetLaneX = modeRef.current === "landing" ? 2.2 : 1.15;
         currentLaneX += (targetLaneX - currentLaneX) * 0.035;
 
         // 1. Calm 3.4-second biological breathing cycle

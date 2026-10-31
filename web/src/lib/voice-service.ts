@@ -61,6 +61,79 @@ function cleanTextForSpeech(text: string): string {
     .trim();
 }
 
+let cachedVoices: SpeechSynthesisVoice[] = [];
+
+if (typeof window !== "undefined" && "speechSynthesis" in window) {
+  const loadVoices = () => {
+    cachedVoices = window.speechSynthesis.getVoices();
+  };
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+/**
+ * Resolves the cleanest female voice in Indian English accent (en-IN).
+ * Supports macOS (Lekha, Veena, Isha, Sangeeta), Google Chrome (Google Indian English),
+ * and Windows/Edge (Heera, Neerja, Swara).
+ */
+export function getIndianFemaleVoice(): SpeechSynthesisVoice | null {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    return null;
+  }
+
+  const voices = cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return null;
+
+  // 1. Explicit macOS / Google / Microsoft Indian Female Voices
+  const explicitIndianFemale = voices.find((v) => {
+    const name = v.name.toLowerCase();
+    const lang = (v.lang || "").toLowerCase().replace("_", "-");
+    const isIndian =
+      lang.startsWith("en-in") ||
+      lang.startsWith("hi-in") ||
+      name.includes("india") ||
+      name.includes("indian");
+
+    const isFemale =
+      name.includes("lekha") ||
+      name.includes("veena") ||
+      name.includes("isha") ||
+      name.includes("sangeeta") ||
+      name.includes("heera") ||
+      name.includes("neerja") ||
+      name.includes("swara") ||
+      name.includes("priya") ||
+      name.includes("female") ||
+      (!name.includes("rishi") && !name.includes("male") && !name.includes("man"));
+
+    return isIndian && isFemale;
+  });
+  if (explicitIndianFemale) return explicitIndianFemale;
+
+  // 2. Any en-IN voice
+  const anyIndianVoice = voices.find((v) => {
+    const lang = (v.lang || "").toLowerCase().replace("_", "-");
+    return lang.startsWith("en-in") || lang.startsWith("hi-in") || v.name.toLowerCase().includes("india");
+  });
+  if (anyIndianVoice) return anyIndianVoice;
+
+  // 3. Fallback to clean natural English female voices
+  const naturalFemale = voices.find((v) => {
+    const name = v.name.toLowerCase();
+    return (
+      (name.includes("samantha") ||
+        name.includes("victoria") ||
+        name.includes("karen") ||
+        name.includes("natural") ||
+        name.includes("female")) &&
+      v.lang.toLowerCase().startsWith("en")
+    );
+  });
+  if (naturalFemale) return naturalFemale;
+
+  return voices[0] || null;
+}
+
 /**
  * Text-to-Speech (TTS): Speaks text aloud in natural executive voice
  */
@@ -85,23 +158,15 @@ export function speakText(
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.rate = 1.05; // Slightly crisp executive pace
-    utterance.pitch = 1.0;
+    utterance.rate = 1.0; // Clear executive pacing
+    utterance.pitch = 1.05; // Clean natural female pitch
     utterance.volume = 1.0;
+    utterance.lang = "en-IN"; // Prioritize Indian English
 
-    // Pick a high-quality English voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(
-      (v) =>
-        (v.name.includes("Samantha") ||
-          v.name.includes("Natural") ||
-          v.name.includes("Google US English") ||
-          v.name.includes("Daniel") ||
-          v.name.includes("Aaron")) &&
-        v.lang.startsWith("en")
-    );
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+    const femaleIndianVoice = getIndianFemaleVoice();
+    if (femaleIndianVoice) {
+      utterance.voice = femaleIndianVoice;
+      utterance.lang = femaleIndianVoice.lang;
     }
 
     if (onStart) utterance.onstart = onStart;

@@ -25,7 +25,6 @@ export const Scene3D: React.FC<Scene3DProps> = ({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const jellyfishGroupRef = useRef<THREE.Group | null>(null);
-  const tentacleBonesRef = useRef<Array<{ bone: THREE.Bone; depth: number; index: number }>>([]);
 
   // Mouse coordinates with damped interpolation
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
@@ -129,27 +128,12 @@ export const Scene3D: React.FC<Scene3DProps> = ({
 
         jellyfishGroup.add(model);
 
-        // Collect tentacle bones for dynamic procedural wave undulation
-        const collectedBones: Array<{ bone: THREE.Bone; depth: number; index: number }> = [];
-        let boneCounter = 0;
-        model.traverse((child) => {
-          if ((child as THREE.Bone).isBone) {
-            const bone = child as THREE.Bone;
-            if (bone.name.startsWith("Top.")) {
-              const numMatch = bone.name.match(/\d+$/);
-              const depth = numMatch ? parseInt(numMatch[0], 10) : 1;
-              collectedBones.push({ bone, depth, index: boneCounter++ });
-            }
-          }
-        });
-        tentacleBonesRef.current = collectedBones;
-
         // Embedded swimming skeletal armature animation
         if (gltf.animations && gltf.animations.length > 0) {
           const mixer = new THREE.AnimationMixer(model);
           const clip = gltf.animations[0];
           const action = mixer.clipAction(clip);
-          action.setEffectiveTimeScale(1.0); // Full natural tempo
+          action.setEffectiveTimeScale(0.75); // Silky, calm tentacle wave tempo
           action.play();
           mixerRef.current = mixer;
         }
@@ -183,168 +167,72 @@ export const Scene3D: React.FC<Scene3DProps> = ({
 
     window.addEventListener("resize", handleResize);
 
-    // 9. Realistic Asymmetrical Vortex Ring Jet Propulsion & Steering Simulation
-    const clock = new THREE.Clock();
+    // 9. Calm, Smooth Aquatic Hover Simulation (Native Performance Timing)
+    let lastTime = performance.now();
+    const startTime = performance.now();
     let animationFrameId: number;
 
-    // Movement & physics states
-    const velocity = new THREE.Vector3(0, 0, 0);
-    const forwardVec = new THREE.Vector3(0, 1, 0); // Model bell apex points along local +Y
-    const currentHeading = new THREE.Vector3(0.15, 0.95, 0.05).normalize();
-    const targetHeading = new THREE.Vector3(0.15, 0.95, 0.05).normalize();
-    const baseScale = 0.66;
-    let wanderAngle = Math.PI * 0.4; // Starts swimming slightly diagonally upward
+    const baseScale = 0.68;
+    let currentLaneX = mode === "landing" ? 0.0 : 1.15;
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      const delta = Math.min(clock.getDelta(), 0.05); // Safe clamp
-      const t = clock.getElapsedTime();
+      const now = performance.now();
+      const delta = Math.min((now - lastTime) * 0.001, 0.05);
+      lastTime = now;
+      const t = (now - startTime) * 0.001;
 
       // Smooth cursor damping
       mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.035;
       mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.035;
 
+      // Update embedded skeletal swimming animation at a silky, calm tempo (No manual bone compounding)
+      if (mixerRef.current) {
+        mixerRef.current.update(delta * 0.75);
+      }
+
       if (jellyfishGroupRef.current) {
         const jf = jellyfishGroupRef.current;
 
-        // -----------------------------------------------------------
-        // 1. MODULO CYCLE TIMER (2.8-second calm, majestic biological cycle)
-        // -----------------------------------------------------------
-        const cycle = t % 2.8;
-        const isPhase1 = cycle < 0.8; // Phase 1: Gentle Power Stroke (0.0s to 0.8s)
+        // Smooth transition between screens (Landing = 0.0, Login/Signup = 1.15)
+        const targetLaneX = modeRef.current === "landing" ? 0.0 : 1.15;
+        currentLaneX += (targetLaneX - currentLaneX) * 0.035;
 
-        // -----------------------------------------------------------
-        // 2. BELL DEFORMATION & GENTLE FORWARD GLIDE
-        // -----------------------------------------------------------
-        if (isPhase1) {
-          // Phase 1 (0.0s - 0.8s): Smooth, slow bell contraction (No sudden head bump)
-          const p = cycle / 0.8; // 0 to 1
-          const contraction = Math.sin(p * Math.PI);
+        // 1. Calm 3.4-second biological breathing cycle
+        const cycle = t % 3.4;
+        const isContracting = cycle < 1.1;
+        const contraction = isContracting ? Math.sin((cycle / 1.1) * Math.PI) : 0;
 
-          // Subtle bell respiration (prevents head-bumping lunges)
-          const scaleXZ = baseScale * (1.0 - 0.12 * contraction);
-          const scaleY = baseScale * (1.0 + 0.04 * contraction);
-          jf.scale.set(scaleXZ, scaleY, scaleXZ);
+        // 2. Subtle, natural bell breathing pulse (minimal deformation, zero head-bump)
+        const scaleXZ = baseScale * (1.0 - 0.06 * contraction);
+        const scaleY = baseScale * (1.0 + 0.02 * contraction);
+        jf.scale.set(scaleXZ, scaleY, scaleXZ);
 
-          // Phase 1 Velocity: Smooth, calm forward glide impulse
-          const forward = forwardVec.clone().applyQuaternion(jf.quaternion);
-          const thrustMagnitude = Math.sin(p * Math.PI) * 0.0065; // Soft, slow & natural
-          velocity.addScaledVector(forward, thrustMagnitude * (delta * 60));
-        } else {
-          // Phase 2 (0.8s - 2.8s): Silky Coasting & Elastic Bell Relaxation
-          jf.scale.x += (baseScale - jf.scale.x) * (0.03 * (delta * 60));
-          jf.scale.y += (baseScale - jf.scale.y) * (0.03 * (delta * 60));
-          jf.scale.z += (baseScale - jf.scale.z) * (0.03 * (delta * 60));
+        // 3. Gentle, small-amplitude aquatic hover (Moves only 1-2 cm on screen, NEVER shooting or jumping)
+        const hoverX = currentLaneX + Math.sin(t * 0.4) * 0.16 + mouseRef.current.x * 0.08;
+        const hoverY = Math.cos(t * 0.5) * 0.10 + contraction * 0.035 + mouseRef.current.y * 0.06;
+        const hoverZ = Math.sin(t * 0.3) * 0.08;
 
-          // Gentle water drag (0.965) preserves smooth coasting momentum
-          const friction = Math.pow(0.965, delta * 60);
-          velocity.multiplyScalar(friction);
-        }
+        // Smooth fluid interpolation towards hover position
+        jf.position.x += (hoverX - jf.position.x) * 0.035;
+        jf.position.y += (hoverY - jf.position.y) * 0.035;
+        jf.position.z += (hoverZ - jf.position.z) * 0.035;
 
-        // Synchronize skeletal animation clip:
-        // Relaxed, hypnotic tentacle flapping synchronized with the 2.8s cycle
-        if (mixerRef.current) {
-          const animSpeed = isPhase1 ? 1.5 : 1.1;
-          mixerRef.current.update(delta * animSpeed);
-        }
+        // 4. Subtle, majestic 3D banking and water roll (very gentle, max 4-6 degrees)
+        const velX = hoverX - jf.position.x;
+        const naturalRoll = -velX * 1.5 + Math.sin(t * 0.35) * 0.05;
+        const naturalPitch = Math.cos(t * 0.3) * 0.04;
+        const naturalYaw = Math.sin(t * 0.25) * 0.08;
 
-        // Secondary Dynamic Water Wave Undulation on Tentacles:
-        // Silky ocean current ripples flowing down the tentacle strands
-        if (tentacleBonesRef.current.length > 0) {
-          const waveTime = t * 2.2;
-          const bones = tentacleBonesRef.current;
-          for (let i = 0; i < bones.length; i++) {
-            const { bone, depth, index } = bones[i];
-            const phase = waveTime - depth * 0.38 + (index * 0.08);
-            const amplitude = 0.018 + depth * 0.004;
-
-            // Lateral fluid flex & water drag
-            bone.rotation.z += Math.sin(phase) * amplitude;
-            bone.rotation.x += Math.cos(phase * 0.8) * (amplitude * 0.6);
-          }
-        }
-
-        // -----------------------------------------------------------
-        // 3. ORGANIC TURNING & HEADING BEHAVIOR (Slow, realistic angles)
-        // -----------------------------------------------------------
-        // Anchor center based on mode:
-        // Landing: centered in website viewport (0.0, 0.0)
-        // Login / Signup: gently swimming on right-hand side (1.05, 0.0)
-        const targetCenterX = modeRef.current === "landing" ? 0.0 : 1.05;
-        const targetCenterY = 0.0;
-
-        const distX = jf.position.x - targetCenterX;
-        const distY = jf.position.y - targetCenterY;
-
-        // Soft boundary steering: gracefully steer toward center when drifting away
-        if (Math.abs(distX) > 0.65 || Math.abs(distY) > 0.55) {
-          const steerX = -distX * 1.4;
-          const steerY = -distY * 1.4 + 0.25; // Slight upward preference like real jellyfish
-          targetHeading.set(steerX, steerY, Math.sin(t * 0.3) * 0.15).normalize();
-        } else {
-          // Inside comfort zone: slow, majestic circular wandering & slight undulation
-          wanderAngle += (Math.sin(t * 0.22) * 0.2 + Math.cos(t * 0.16) * 0.15) * delta;
-          const wanderX = Math.cos(wanderAngle) * 0.6 + mouseRef.current.x * 0.12;
-          const wanderY = Math.abs(Math.sin(wanderAngle)) * 0.55 + 0.35 + mouseRef.current.y * 0.08;
-          const wanderZ = Math.sin(t * 0.2) * 0.12;
-          targetHeading.set(wanderX, wanderY, wanderZ).normalize();
-        }
-
-        // Smoothly interpolate current heading toward target heading (slow, majestic turn rate)
-        currentHeading.lerp(targetHeading, 0.018 * (delta * 60));
-        currentHeading.normalize();
-
-        // -----------------------------------------------------------
-        // 4. BANKING & TILT: Orient the jellyfish's bell in the heading direction!
-        // -----------------------------------------------------------
-        const targetQuat = new THREE.Quaternion().setFromUnitVectors(forwardVec, currentHeading);
-
-        // Add subtle natural water roll into turns
-        const rollAxis = currentHeading.clone().normalize();
-        const rollAngle = Math.sin(t * 0.4) * 0.08;
-        const rollQuat = new THREE.Quaternion().setFromAxisAngle(rollAxis, rollAngle);
-        targetQuat.multiply(rollQuat);
-
-        // Slerp orientation smoothly (majestic 3D banking)
-        jf.quaternion.slerp(targetQuat, 0.02 * (delta * 60));
-
-        // -----------------------------------------------------------
-        // 5. TRANSLATION & ABSOLUTE BOUNDARY CONFINEMENT
-        // -----------------------------------------------------------
-        jf.position.add(velocity);
-
-        // Subtle water buoyancy wave
-        jf.position.y += Math.sin(t * 0.7) * 0.0006;
-
-        // STRICT 100% BOUNDS CHECK: Fish MUST NEVER exit the website dimensions!
-        const boundMinX = modeRef.current === "landing" ? -1.3 : 0.25;
-        const boundMaxX = modeRef.current === "landing" ? 1.3 : 1.85;
-        const boundMinY = -1.05;
-        const boundMaxY = 1.05;
-
-        if (jf.position.x < boundMinX) {
-          jf.position.x = boundMinX;
-          velocity.x = Math.abs(velocity.x) * 0.15;
-        } else if (jf.position.x > boundMaxX) {
-          jf.position.x = boundMaxX;
-          velocity.x = -Math.abs(velocity.x) * 0.15;
-        }
-
-        if (jf.position.y < boundMinY) {
-          jf.position.y = boundMinY;
-          velocity.y = Math.abs(velocity.y) * 0.15;
-        } else if (jf.position.y > boundMaxY) {
-          jf.position.y = boundMaxY;
-          velocity.y = -Math.abs(velocity.y) * 0.15;
-        }
-
-        jf.position.z = THREE.MathUtils.clamp(jf.position.z, -0.4, 0.4);
+        jf.rotation.z += (naturalRoll - jf.rotation.z) * 0.03;
+        jf.rotation.x += (naturalPitch - jf.rotation.x) * 0.03;
+        jf.rotation.y += (naturalYaw - jf.rotation.y) * 0.03;
       }
 
       // Camera subtle parallax
       if (cameraRef.current) {
-        cameraRef.current.position.x += (mouseRef.current.x * 0.2 - cameraRef.current.position.x) * 0.025;
-        cameraRef.current.position.y += (mouseRef.current.y * 0.14 - cameraRef.current.position.y) * 0.025;
+        cameraRef.current.position.x += (mouseRef.current.x * 0.15 - cameraRef.current.position.x) * 0.025;
+        cameraRef.current.position.y += (mouseRef.current.y * 0.1 - cameraRef.current.position.y) * 0.025;
         cameraRef.current.lookAt(0, 0, 0);
       }
 

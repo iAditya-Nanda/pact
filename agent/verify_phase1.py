@@ -40,7 +40,7 @@ def print_step(title: str):
 
 
 def print_success(detail: str):
-    print(f"  \033[1;32m✔ PASS:\033[0m {detail}")
+    print(f"  \033[1;32m[PASS] PASS:\033[0m {detail}")
 
 
 def main():

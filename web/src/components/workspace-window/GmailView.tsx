@@ -1086,8 +1086,9 @@ export const GmailView: React.FC<GmailViewProps> = ({
             <div className="px-5 py-2.5 rounded-2xl bg-[#090d16]/90 border border-cyan-400/50 shadow-[0_0_25px_rgba(6,182,212,0.35)] flex items-center gap-3 backdrop-blur-md">
               <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
               <div className="flex flex-col">
-                <span className="text-2xs font-extrabold tracking-wider uppercase text-cyan-400">
-                  ⚡ PACT Autonomous Agent Active • Screen Control
+                <span className="text-2xs font-extrabold tracking-wider uppercase text-cyan-400 flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-cyan-400" />
+                  <span>PACT Autonomous Agent Active • Screen Control</span>
                 </span>
                 <span className="text-xs font-semibold text-white">
                   {agentTelemetry}

@@ -59,10 +59,10 @@ class SyntheticBenchmarkSuite:
         print(f"  {BLUE}•{RESET} {name:<40} {BOLD}{val}{RESET} {unit}")
 
     def log_pass(self, detail: str):
-        print(f"  {GREEN}✔ PASS:{RESET} {detail}")
+        print(f"  {GREEN}[PASS] PASS:{RESET} {detail}")
 
     def log_fail(self, detail: str):
-        print(f"  {RED}✘ FAIL:{RESET} {detail}")
+        print(f"  {RED}[FAIL] FAIL:{RESET} {detail}")
 
     def run_all(self):
         self.start_time = time.perf_counter()

@@ -750,39 +750,43 @@ export default function DashboardPage() {
         </div>
 
         {/* Right Controls: AI Pitch Tour Button, Theme Switcher & Sign Out */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* AI Pitch Tour Trigger */}
           <button
             id="tour-start-btn"
             onClick={() => setIsTourOpen(true)}
-            className="px-3 py-1.5 rounded-xl bg-linear-to-r from-[#0b57d0] via-[#6366f1] to-[#7c3aed] hover:brightness-110 active:scale-95 text-white text-xs font-bold shadow-xs flex items-center gap-2 transition-all cursor-pointer"
+            className="px-3.5 py-1.5 rounded-full bg-[#0b57d0] hover:bg-[#0842a0] dark:bg-[#a8c7fa] dark:hover:bg-[#d3e3fd] text-white dark:text-[#041e49] text-xs font-semibold shadow-xs flex items-center gap-2 transition-all active:scale-95 cursor-pointer shrink-0 border border-transparent"
             title="Start 1-Minute Executive Voice Tour & AI Pitch"
           >
-            <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse shrink-0" />
-            <span className="tracking-tight">AI Pitch Tour</span>
-            <span className="hidden sm:inline px-1.5 py-0.2 rounded-full bg-white/20 text-3xs font-extrabold uppercase tracking-wider">
-              Voice 1m
+            <Sparkles className="w-3.5 h-3.5 shrink-0 text-white dark:text-[#041e49]" />
+            <span className="font-semibold tracking-tight">AI Pitch Tour</span>
+            <span className="hidden sm:inline px-1.5 py-0.5 rounded-full bg-white/20 dark:bg-[#00325b]/20 text-3xs font-bold uppercase tracking-wider">
+              1m
             </span>
           </button>
 
-          {/* Theme Toggle Button */}
+          {/* Top Theme Toggle Button */}
           <button
             onClick={handleToggleTheme}
-            className="p-2 rounded-xl text-[#444746] dark:text-[#c4c6cf] hover:text-[#0b57d0] dark:hover:text-[#a8c7fa] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] transition-all cursor-pointer"
+            className="p-2 rounded-full border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] transition-all cursor-pointer shadow-2xs flex items-center justify-center shrink-0"
             title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            aria-label="Toggle Theme"
+            aria-label={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
-            {isDark ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5 text-[#444746]" />}
+            {isDark ? (
+              <Sun className="w-4 h-4 text-[#f9ab00] dark:text-[#fdd663]" />
+            ) : (
+              <Moon className="w-4 h-4 text-[#444746]" />
+            )}
           </button>
 
           {/* Sign Out Button */}
           <button
             onClick={() => setIsLogoutModalOpen(true)}
-            className="p-2 rounded-xl text-[#444746] dark:text-[#c4c6cf] hover:text-[#ba1a1a] dark:hover:text-[#ff897d] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] transition-all cursor-pointer"
+            className="p-2 rounded-full border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] text-[#444746] dark:text-[#c4c6cf] hover:text-[#ba1a1a] dark:hover:text-[#ff897d] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] transition-all cursor-pointer shadow-2xs shrink-0"
             title="Sign Out"
             aria-label="Sign Out"
           >
-            <LogOut className="w-4.5 h-4.5" />
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </header>
@@ -1617,18 +1621,19 @@ export default function DashboardPage() {
               <span>Settings</span>
             </button>
 
-            {/* Theme Toggle Button */}
+            {/* Bottom Theme Toggle Button */}
             <button
               onClick={handleToggleTheme}
               className="py-2.5 px-3 rounded-xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] text-xs font-semibold text-[#1f1f1f] dark:text-[#e2e2e6] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
               title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {isDark ? (
-                <Moon className="w-4 h-4 text-[#a8c7fa]" />
+                <Sun className="w-4 h-4 text-[#f9ab00] dark:text-[#fdd663]" />
               ) : (
-                <Sun className="w-4 h-4 text-[#f9ab00]" />
+                <Moon className="w-4 h-4 text-[#444746]" />
               )}
-              <span>{isDark ? "Dark" : "Theme"}</span>
+              <span>{isDark ? "Light" : "Dark"}</span>
             </button>
           </div>
         </div>

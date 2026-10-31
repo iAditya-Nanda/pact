@@ -12,38 +12,29 @@ export default function LoginPage() {
   const { user, loginWithGoogle, isLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isVerifyingSession, setIsVerifyingSession] = useState(true);
   const router = useRouter();
   const pageRef = useRef<HTMLDivElement>(null);
 
-  // 1-second deliberate verification of active session
+  // Background session verification and immediate entrance slide
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const stored =
-        typeof window !== "undefined"
-          ? localStorage.getItem("pact_auth_user")
-          : null;
+    const stored =
+      typeof window !== "undefined"
+        ? localStorage.getItem("pact_auth_user")
+        : null;
 
-      if (user || stored) {
-        router.push("/dashboard");
-      } else {
-        setIsVerifyingSession(false);
-      }
-    }, 1000);
+    if (user || stored) {
+      router.push("/dashboard");
+    }
 
-    return () => clearTimeout(timer);
-  }, [user, router]);
-
-  // Entrance slide from right
-  useEffect(() => {
-    if (!isVerifyingSession && pageRef.current) {
+    // Smooth entrance slide from the right
+    if (pageRef.current) {
       gsap.fromTo(
         pageRef.current,
         { x: "100%", opacity: 0 },
-        { x: "0%", opacity: 1, duration: 0.55, ease: "power3.out" }
+        { x: "0%", opacity: 1, duration: 0.5, ease: "power3.out" }
       );
     }
-  }, [isVerifyingSession]);
+  }, [user, router]);
 
   const navigateBackToHome = () => {
     if (pageRef.current) {
@@ -95,41 +86,6 @@ export default function LoginPage() {
       setIsSubmitting(false);
     }
   };
-
-  // Dedicated 1-second session verification screen
-  if (isVerifyingSession) {
-    return (
-      <div className="h-screen max-h-screen flex flex-col justify-between overflow-hidden bg-[#f8fafd] dark:bg-[#0c0e14] select-none text-[#1f1f1f] dark:text-[#e2e2e6] relative">
-        <Scene3D mode="login" />
-        <div className="relative z-10 flex flex-col h-full justify-between">
-          <header className="h-16 border-b border-white/20 dark:border-white/10 bg-white/30 dark:bg-[#0c0e14]/40 backdrop-blur-2xl px-6 lg:px-10 flex items-center justify-between shrink-0">
-            <Link href="/" className="flex items-center gap-3 group cursor-pointer">
-              <div className="w-8 h-8 rounded-xl bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs">
-                P
-              </div>
-              <span className="text-xl font-bold tracking-tight text-[#1f1f1f] dark:text-white">
-                PACT
-              </span>
-            </Link>
-          </header>
-
-          <main className="flex-1 flex items-center justify-center px-6 py-8">
-            <div className="flex flex-col items-center gap-3.5 p-8 rounded-3xl bg-white/25 dark:bg-[#1d1f24]/30 backdrop-blur-2xl border border-white/50 dark:border-white/10 shadow-xl animate-in fade-in duration-200">
-              <Loader2 className="w-8 h-8 animate-spin text-[#0b57d0] dark:text-[#38bdf8]" />
-              <span className="text-sm font-medium text-[#444746] dark:text-[#c4c6cf]">
-                Verifying active session...
-              </span>
-            </div>
-          </main>
-
-          <footer className="h-12 border-t border-white/20 dark:border-white/10 bg-white/30 dark:bg-[#0c0e14]/40 backdrop-blur-md px-6 lg:px-10 flex items-center justify-between text-2xs text-[#747775] dark:text-[#8e9099] shrink-0">
-            <div>PACT • Authentication Gateway</div>
-            <div>Secure session verification</div>
-          </footer>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div

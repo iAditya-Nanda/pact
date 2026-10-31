@@ -25,6 +25,7 @@ export const Scene3D: React.FC<Scene3DProps> = ({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const jellyfishGroupRef = useRef<THREE.Group | null>(null);
+  const tentacleBonesRef = useRef<Array<{ bone: THREE.Bone; depth: number; index: number }>>([]);
 
   // Mouse coordinates with damped interpolation
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
@@ -128,12 +129,27 @@ export const Scene3D: React.FC<Scene3DProps> = ({
 
         jellyfishGroup.add(model);
 
+        // Collect tentacle bones for dynamic procedural wave undulation
+        const collectedBones: Array<{ bone: THREE.Bone; depth: number; index: number }> = [];
+        let boneCounter = 0;
+        model.traverse((child) => {
+          if ((child as THREE.Bone).isBone) {
+            const bone = child as THREE.Bone;
+            if (bone.name.startsWith("Top.")) {
+              const numMatch = bone.name.match(/\d+$/);
+              const depth = numMatch ? parseInt(numMatch[0], 10) : 1;
+              collectedBones.push({ bone, depth, index: boneCounter++ });
+            }
+          }
+        });
+        tentacleBonesRef.current = collectedBones;
+
         // Embedded swimming skeletal armature animation
         if (gltf.animations && gltf.animations.length > 0) {
           const mixer = new THREE.AnimationMixer(model);
           const clip = gltf.animations[0];
           const action = mixer.clipAction(clip);
-          action.setEffectiveTimeScale(0.4); // Ultra-gentle, slow tentacle wave tempo
+          action.setEffectiveTimeScale(1.0); // Full natural tempo
           action.play();
           mixerRef.current = mixer;
         }
@@ -228,10 +244,26 @@ export const Scene3D: React.FC<Scene3DProps> = ({
         }
 
         // Synchronize skeletal animation clip:
-        // Tight trailing tentacles during contraction, slow flaring during recovery
+        // Duration of clip is 4.29s; running at ~2.15x maps 4.29s to our 2.0s propulsion cycle!
         if (mixerRef.current) {
-          const animSpeed = isPhase1 ? 0.8 : 0.3;
+          const animSpeed = isPhase1 ? 2.6 : 1.9;
           mixerRef.current.update(delta * animSpeed);
+        }
+
+        // Secondary Dynamic Water Wave Undulation on Tentacles:
+        // Simulates water resistance, inertia, and fluid aquatic ripples down the tentacle chains
+        if (tentacleBonesRef.current.length > 0) {
+          const waveTime = t * 3.2;
+          const bones = tentacleBonesRef.current;
+          for (let i = 0; i < bones.length; i++) {
+            const { bone, depth, index } = bones[i];
+            const phase = waveTime - depth * 0.42 + (index * 0.08);
+            const amplitude = 0.025 + depth * 0.007; // Outer tips wave more than base
+
+            // Lateral fluid flex & water drag
+            bone.rotation.z += Math.sin(phase) * amplitude;
+            bone.rotation.x += Math.cos(phase * 0.8) * (amplitude * 0.7);
+          }
         }
 
         // -----------------------------------------------------------

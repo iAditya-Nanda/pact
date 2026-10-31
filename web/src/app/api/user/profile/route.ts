@@ -48,10 +48,15 @@ export async function GET(request: Request) {
       }
     }
 
-    // Default primary developer account fallback
+    // Default primary developer account fallback from backend users
+    const firstUser = Object.values(users)[0];
+    if (firstUser) {
+      return NextResponse.json({ success: true, user: firstUser });
+    }
+
     return NextResponse.json({
       success: true,
-      user: users["usr_adityananda_dev"] || {
+      user: {
         id: "usr_adityananda_dev",
         email: "adityananda.dev@gmail.com",
         fullName: "Aditya Nanda",

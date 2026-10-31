@@ -160,8 +160,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // Fire-and-forget sync to Firestore and server database
         safeFirestoreSync(firebaseUser.uid, profile);
         syncProfileToBackend(profile);
+        setIsLoading(false);
+      } else {
+        // Check if backend database has verified user session from users.json
+        fetch("/api/user/profile")
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data?.user) {
+              setUser((prev) => prev || data.user);
+              if (typeof window !== "undefined") {
+                if (!localStorage.getItem("pact_auth_user")) {
+                  localStorage.setItem("pact_auth_user", JSON.stringify(data.user));
+                }
+                if (data.user.googleAccessToken && !localStorage.getItem("pact_google_access_token")) {
+                  localStorage.setItem("pact_google_access_token", data.user.googleAccessToken);
+                }
+              }
+            }
+          })
+          .catch(() => {})
+          .finally(() => setIsLoading(false));
       }
-      setIsLoading(false);
     });
 
     return () => unsubscribe();

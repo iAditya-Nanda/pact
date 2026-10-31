@@ -81,7 +81,7 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
     gmail: [
       "Summarize unread priority emails",
       "Draft reply to Renee at Cline about Kimi K3.1",
-      "Find emails regarding architecture roadmap",
+      "Send email to samridhisharma041@gmail.com",
     ],
     calendar: [
       "Check schedule conflicts for today",

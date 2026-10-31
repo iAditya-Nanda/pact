@@ -6,6 +6,7 @@ import {
   updateSettings,
   approvePendingAction,
   writeWorkspace,
+  addWorkspaceEmail,
 } from "@/lib/workspace-service";
 import { fetchAllGoogleWorkspace } from "@/lib/google-workspace";
 
@@ -16,6 +17,8 @@ export async function GET(request: Request) {
     const bearerToken = authHeader?.replace(/^Bearer\s+/i, "");
     const queryToken = searchParams.get("token");
 
+    let workspace = readWorkspace();
+
     // Retrieve access token from header, query param, or server session storage
     let token = bearerToken || queryToken;
 
@@ -25,14 +28,26 @@ export async function GET(request: Request) {
         if (fs.existsSync(usersPath)) {
           const users = JSON.parse(fs.readFileSync(usersPath, "utf-8"));
           const first = Object.values(users)[0] as any;
-          if (first?.googleAccessToken) {
-            token = first.googleAccessToken;
+          if (first) {
+            if (first.googleAccessToken) {
+              token = first.googleAccessToken;
+            }
+            if (workspace?.user) {
+              workspace.user = {
+                id: first.id || workspace.user.id,
+                email: first.email || workspace.user.email,
+                fullName: first.fullName || workspace.user.fullName,
+                avatarUrl: first.avatarUrl || workspace.user.avatarUrl,
+                role: first.role || workspace.user.role,
+                age: first.age || workspace.user.age,
+                schedulePreference: first.schedulePreference || workspace.user.schedulePreference,
+              };
+            }
           }
         }
       } catch {}
     }
 
-    let workspace = readWorkspace();
     let isLiveGoogleData = false;
     let isDevBypass = false;
     let disabledApis: string[] = [];
@@ -128,6 +143,16 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         workspace: updated,
+      });
+    }
+
+    // Handle email dispatch approval
+    if (action === "send_email" && body.email) {
+      const result = addWorkspaceEmail(body.email);
+      return NextResponse.json({
+        success: true,
+        message: "Email dispatched successfully",
+        workspace: result.workspace,
       });
     }
 

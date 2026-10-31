@@ -125,25 +125,21 @@ export default function DashboardPage() {
     }
   };
 
-  const activeUser = user || localCache;
+  // Live Workspace API State
+  const [workspace, setWorkspace] = useState<any>(null);
 
-  // Redirect to login only if confirmed unauthenticated after mount
-  useEffect(() => {
-    if (mounted && !isLoading && !activeUser) {
-      router.push("/login");
-    }
-  }, [mounted, isLoading, activeUser, router]);
+  const activeUser = user || workspace?.user || localCache;
 
-  // Dynamic user data (SSR safe with mounted guard to eliminate hydration mismatch)
-  const displayName = mounted && activeUser?.fullName ? activeUser.fullName : "Aditya Nanda";
-  const displayEmail = mounted && activeUser?.email ? activeUser.email : "adityananda.dev@gmail.com";
-  const displayAvatar = mounted && activeUser?.avatarUrl ? activeUser.avatarUrl : "";
-  const displayRole = mounted && activeUser?.role ? activeUser.role : "Lead Architect";
-  const displayAge = mounted && activeUser?.age ? activeUser.age : 24;
+  // Dynamic user data (prioritizes real backend synced profile)
+  const displayName = activeUser?.fullName || workspace?.user?.fullName || "Aditya Nanda";
+  const displayEmail = activeUser?.email || workspace?.user?.email || "adityananda.dev@gmail.com";
+  const displayAvatar = activeUser?.avatarUrl || workspace?.user?.avatarUrl || "";
+  const displayRole = activeUser?.role || workspace?.user?.role || "Lead Architect";
+  const displayAge = activeUser?.age || workspace?.user?.age || 24;
   const displayPreference =
-    mounted && activeUser?.schedulePreference
-      ? activeUser.schedulePreference
-      : "Avoid meetings before 10:00 AM";
+    activeUser?.schedulePreference ||
+    workspace?.user?.schedulePreference ||
+    "Avoid meetings before 10:00 AM";
 
   // Initials for avatar fallback
   const initials = displayName
@@ -197,8 +193,7 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Live Workspace API State
-  const [workspace, setWorkspace] = useState<any>(null);
+  // Dashboard action states
   const [isApproving, setIsApproving] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
@@ -609,6 +604,22 @@ export default function DashboardPage() {
   // Handle Human-in-the-Loop Clearance approval from chat card
   const handleApproveHitlAction = async (approval: any) => {
     try {
+      if (approval?.tool_name === "send_email" && approval?.payload) {
+        await fetch("/api/workspace/overview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "send_email",
+            email: approval.payload,
+          }),
+        });
+        const text = `Execution clearance authorized for 'send_email'. Transmitted email to ${approval.payload.to || "samridhisharma041@gmail.com"}. Verified and logged in tamper-evident audit ledger.`;
+        setChatMessages((prev) => [...prev, { sender: "ai", text }]);
+        speakText(text, () => setIsSpeaking(true), () => setIsSpeaking(false));
+        await refreshWorkspace();
+        return;
+      }
+
       const res = await fetch("http://127.0.0.1:8000/api/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

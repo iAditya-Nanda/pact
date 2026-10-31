@@ -431,3 +431,116 @@ export function approvePendingAction(actionId?: string, idempotencyKey?: string)
 
   return { success: true, message: "Action approved and synchronized." };
 }
+
+export function addWorkspaceEmail(email: {
+  to: string;
+  subject: string;
+  body: string;
+  sender?: string;
+  priority?: "urgent" | "high" | "normal";
+}) {
+  const workspace = readWorkspace();
+  const id = `msg_${Date.now()}`;
+  const newEmail: WorkspaceEmail = {
+    id,
+    sender: email.sender || workspace.user?.fullName || "Aditya Nanda",
+    senderEmail: email.to,
+    subject: email.subject || "Project Update",
+    snippet: email.body.slice(0, 120),
+    receivedAt: new Date().toISOString(),
+    status: "read",
+    priority: email.priority || "normal",
+    thisMonth: true,
+  };
+
+  workspace.emails = [newEmail, ...(workspace.emails || [])];
+  writeWorkspace(workspace);
+  return { success: true, email: newEmail, workspace };
+}
+
+export function addWorkspaceCalendarEvent(event: {
+  title: string;
+  startTime: string;
+  endTime?: string;
+  location?: string;
+}) {
+  const workspace = readWorkspace();
+  const id = `evt_${Date.now()}`;
+  const newEvent: WorkspaceCalendarEvent = {
+    id,
+    title: event.title,
+    description: "Scheduled via PACT Chief of Staff",
+    startTime: event.startTime,
+    endTime: event.endTime || "5:30 PM",
+    location: event.location || "Google Meet (meet.google.com/pact-sync)",
+    conflictDetected: false,
+    isToday: true,
+    hours: 1,
+    status: "confirmed",
+  };
+
+  workspace.calendarEvents = [...(workspace.calendarEvents || []), newEvent];
+  workspace.metrics.meetingsToday = (workspace.metrics.meetingsToday || 0) + 1;
+  writeWorkspace(workspace);
+  return { success: true, event: newEvent, workspace };
+}
+
+export function deleteWorkspaceCalendarEvent(identifier: string) {
+  const workspace = readWorkspace();
+  const initialCount = workspace.calendarEvents.length;
+  const lower = identifier.toLowerCase();
+  workspace.calendarEvents = workspace.calendarEvents.filter(
+    (e) => e.id !== identifier && !e.title.toLowerCase().includes(lower)
+  );
+
+  if (workspace.calendarEvents.length < initialCount) {
+    workspace.metrics.meetingsToday = Math.max(0, workspace.metrics.meetingsToday - 1);
+    writeWorkspace(workspace);
+    return { success: true, deleted: true, workspace };
+  }
+  return { success: false, message: "Event not found" };
+}
+
+export function addWorkspaceTask(task: {
+  title: string;
+  description?: string;
+  dueDate?: string;
+  priority?: "urgent" | "high" | "medium" | "low";
+}) {
+  const workspace = readWorkspace();
+  const id = `tsk_${Date.now()}`;
+  const newTask: WorkspaceTask = {
+    id,
+    title: task.title,
+    description: task.description || "",
+    dueDate: task.dueDate || "Today",
+    isDueToday: true,
+    isOverdue: false,
+    priority: task.priority || "medium",
+    status: "pending",
+  };
+
+  workspace.tasks = [newTask, ...(workspace.tasks || [])];
+  workspace.metrics.activeTasks = (workspace.metrics.activeTasks || 0) + 1;
+  workspace.metrics.dueToday = (workspace.metrics.dueToday || 0) + 1;
+  writeWorkspace(workspace);
+  return { success: true, task: newTask, workspace };
+}
+
+export function deleteWorkspaceTask(identifier: string) {
+  const workspace = readWorkspace();
+  const initialCount = workspace.tasks.length;
+  const lower = identifier.toLowerCase();
+  workspace.tasks = workspace.tasks.filter(
+    (t) => t.id !== identifier && !t.title.toLowerCase().includes(lower)
+  );
+
+  if (workspace.tasks.length < initialCount) {
+    workspace.metrics.activeTasks = Math.max(0, workspace.metrics.activeTasks - 1);
+    workspace.metrics.dueToday = Math.max(0, workspace.metrics.dueToday - 1);
+    writeWorkspace(workspace);
+    return { success: true, deleted: true, workspace };
+  }
+  return { success: false, message: "Task not found" };
+}
+

@@ -1,13 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  readWorkspace,
-  approvePendingAction,
-  addWorkspaceEmail,
-  addWorkspaceCalendarEvent,
-  deleteWorkspaceCalendarEvent,
-  addWorkspaceTask,
-  deleteWorkspaceTask,
-} from "@/lib/workspace-service";
+import { readWorkspace } from "@/lib/workspace-service";
 
 const AGENT_BACKEND_URL = process.env.PACT_AGENT_API_URL || "http://127.0.0.1:8000";
 
@@ -198,162 +190,13 @@ export async function POST(request: Request) {
       backendUsed = false;
     }
 
-    // Local deterministic coordination fallback if backend did not yield a response
     if (!responseText) {
-      // 1. Sending Email (e.g. to samridhisharma041@gmail.com)
-      if (
-        (lower.includes("send") && (lower.includes("mail") || lower.includes("email") || lower.includes("@"))) ||
-        lower.includes("samridhisharma041@gmail.com")
-      ) {
-        const emailMatch = message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-        const recipient = emailMatch ? emailMatch[0] : "samridhisharma041@gmail.com";
-        const subject = "Project Architecture Review & Q4 Sprint Alignment";
-        const emailBody = `Hi ${recipient.split("@")[0]}, I have finalized the Chief of Staff system architecture review and cross-workspace synchronization. Please review the attached deliverables. - Aditya`;
-
-        if (mode === "turbo") {
-          addWorkspaceEmail({
-            to: recipient,
-            subject,
-            body: emailBody,
-            priority: "high",
-          });
-          updatedWorkspace = readWorkspace();
-          responseText = `Turbo Mode Autonomous Dispatch: Email has been sent to ${recipient} with subject "${subject}". Google Workspace outbox updated and transaction logged in the audit ledger.`;
-        } else {
-          // Safe Mode: Generate HITL Clearance Card
-          hitlApproval = {
-            approval_id: `hitl_email_${Date.now()}`,
-            tool_name: "send_email",
-            summary: `Send external email to ${recipient}`,
-            payload_hash: `sha256_${Date.now().toString(16)}`,
-            payload: {
-              to: recipient,
-              subject,
-              body: emailBody,
-            },
-          };
-          responseText = `I have drafted the email to ${recipient} regarding "${subject}". Because sending an email is a consequential external action, Safe Mode requires your explicit clearance. Please review the clearance card below and authorize execution.`;
-        }
-      }
-      // 2. Calendar Event Cancellation / Deletion
-      else if (
-        (lower.includes("delete") || lower.includes("cancel") || lower.includes("remove")) &&
-        (lower.includes("event") || lower.includes("meeting") || lower.includes("sync"))
-      ) {
-        const eventName = message.replace(/cancel|delete|remove|event|meeting/gi, "").trim() || "Client Technical Debrief";
-        deleteWorkspaceCalendarEvent(eventName);
-        updatedWorkspace = readWorkspace();
-        responseText = `Meeting cancelled: Removed "${eventName}" from your Google Calendar schedule. The time slot has been freed.`;
-      }
-      // 3. Calendar Rescheduling & Conflicts
-      else if (
-        lower.includes("schedule") ||
-        lower.includes("meeting") ||
-        lower.includes("calendar") ||
-        lower.includes("event") ||
-        lower.includes("reschedule") ||
-        lower.includes("conflict") ||
-        lower.includes("debrief")
-      ) {
-        if (
-          lower.includes("reschedule") ||
-          lower.includes("move") ||
-          lower.includes("conflict") ||
-          lower.includes("debrief")
-        ) {
-          approvePendingAction("act_reschedule_client_debrief");
-          updatedWorkspace = readWorkspace();
-          if (mode === "turbo") {
-            responseText =
-              "Turbo Mode Autonomous Execution: 'Client Technical Debrief' has been moved to 3:30 PM and Google Calendar is updated. Your 2:00 PM - 3:00 PM Focus Block is now fully protected.";
-          } else {
-            responseText =
-              "Conflict resolved: 'Client Technical Debrief' has been moved to 3:30 PM. Your 2:00 PM - 3:00 PM Focus Block is now fully protected and updated across Google Calendar.";
-          }
-        } else if (lower.includes("add") || lower.includes("create") || lower.includes("new")) {
-          const title = message.replace(/add|schedule|create|new|event|meeting|at \d+:\d+.*$/gi, "").trim() || "Design System Sync";
-          addWorkspaceCalendarEvent({
-            title,
-            startTime: "4:30 PM",
-            endTime: "5:30 PM",
-          });
-          updatedWorkspace = readWorkspace();
-          responseText = `Event confirmed: Scheduled "${title}" for 4:30 PM - 5:30 PM. Added to Google Calendar.`;
-        } else {
-          const meeting = workspace.nextMeeting;
-          responseText = `You have ${workspace.metrics?.meetingsToday ?? 1} meeting scheduled today: "${meeting?.title || "Client Technical Debrief"}" at ${meeting?.time || "2:00 PM - 3:00 PM"}. A conflict was identified with your protected focus block rule, and I can reschedule it to 3:30 PM for you.`;
-        }
-      }
-      // 4. Tasks Deletion / Completion
-      else if (
-        (lower.includes("delete") || lower.includes("remove") || lower.includes("clear") || lower.includes("complete")) &&
-        (lower.includes("task") || lower.includes("todo"))
-      ) {
-        const taskName = message.replace(/delete|remove|clear|complete|task|todo/gi, "").trim() || "task";
-        deleteWorkspaceTask(taskName);
-        updatedWorkspace = readWorkspace();
-        responseText = `Task updated: Deliverable "${taskName}" has been completed and cleared from your active Google Tasks queue.`;
-      }
-      // 5. Tasks Creation & Listing
-      else if (
-        lower.includes("task") ||
-        lower.includes("todo") ||
-        lower.includes("due") ||
-        lower.includes("deadline")
-      ) {
-        if (
-          lower.includes("add") ||
-          lower.includes("create") ||
-          lower.includes("new")
-        ) {
-          const taskTitle = message.replace(/add|create|new|task|todo|priority/gi, "").trim() || "Review distributed token rotation";
-          addWorkspaceTask({
-            title: taskTitle,
-            priority: "high",
-          });
-          updatedWorkspace = readWorkspace();
-          responseText = `Task registered: Created new task "${taskTitle}" in Google Tasks with High priority and due date set for today.`;
-        } else {
-          const top = workspace.topAction;
-          responseText = `You have ${workspace.metrics?.activeTasks ?? 3} active tasks in your queue (${workspace.metrics?.dueToday ?? 1} due today). Top priority deliverable: "${top?.title || "Resolve Calendar Focus Block Overlap"} - ${top?.description || "Due at 3:30 PM"}".`;
-        }
-      }
-      // 6. Email Search & Specific Email Discovery
-      else if (lower.includes("find") || lower.includes("search")) {
-        if (lower.includes("renee") || lower.includes("kimi") || lower.includes("cline")) {
-          responseText = `Found email from Renee at Cline: "Kimi K3.1 Pro joins ClinePass + What's New in Cline Desktop". Received 3 hours ago with high priority. Would you like me to draft a response or open Gmail?`;
-        } else if (lower.includes("adobe")) {
-          responseText = `Found email from Adobe: "A little thank-you from Adobe" received on 24 October with normal priority.`;
-        } else if (lower.includes("supabase")) {
-          responseText = `Found email from ant.wilson@supabase.com: "Your Supabase Project vending-machine has been paused" received on 27 September.`;
-        } else if (lower.includes("mapbox")) {
-          responseText = `Found email from Team Mapbox: "See how the Mapbox CEO is thinking about AI" received on 28 September.`;
-        } else {
-          responseText = `Searched your 25 inbox messages. Top result: Email from Renee at Cline regarding "Kimi K3.1 Pro joins ClinePass".`;
-        }
-      }
-      // 7. Email Reading & Summaries
-      else if (
-        lower.includes("mail") ||
-        lower.includes("email") ||
-        lower.includes("inbox") ||
-        lower.includes("renee")
-      ) {
-        const unreadCount = workspace.metrics?.unreadEmails ?? 1;
-        const totalThisMonth = workspace.emails?.length ?? 25;
-        const latest = workspace.latestEmail || workspace.emails?.[0];
-        const senderName = latest?.sender || "Renee at Cline";
-        const subject = latest?.subject || "Kimi K3.1 Pro joins ClinePass + What's New in Cline Desktop";
-
-        if (lower.includes("draft") || lower.includes("reply") || lower.includes("write")) {
-          responseText = `Draft prepared for ${senderName} regarding "${subject}". Executive response: "Thank you for sharing the Kimi K3.1 update. I reviewed the throughput benchmarks and will coordinate next steps after our release review." The draft is saved in your Gmail compose drawer.`;
-        } else if (lower.includes("all") || lower.includes("summary") || lower.includes("check")) {
-          responseText = `Here is your full inbox briefing: You have ${unreadCount} unread email and ${totalThisMonth} total messages this month. The unread email is from ${senderName} regarding "${subject}". Other recent communications include updates from Adobe, Team Mapbox, and Supabase. Everything is indexed and synchronized.`;
-        } else {
-          responseText = `You have ${unreadCount} unread email and ${totalThisMonth} total messages this month in your inbox. Your top priority unread email is from ${senderName} regarding "${subject}". Would you like me to draft a response or open Gmail?`;
-        }
+      if (!backendUsed) {
+        responseText =
+          "The PACT Python Agent engine (http://127.0.0.1:8000) is currently offline or unreachable. Please verify that the agent server is running.";
       } else {
-        responseText = `PACT Chief of Staff (${mode === "turbo" ? "Turbo Mode (Full Autonomy)" : "Safe Mode (Guarded Execution)"}): Received instruction "${message}". Synchronized across Gmail, Google Calendar, and Google Tasks with verified idempotency.`;
+        responseText =
+          "I have processed your request across your workspace tools with verified idempotency.";
       }
     }
 

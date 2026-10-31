@@ -10,24 +10,17 @@ class IntentExtractionService:
 
     def extract_intent(self, instruction: str) -> ParsedIntent:
         """
-        Parses a natural language instruction into a validated ParsedIntent object.
-        Uses fast high-confidence semantic routing for standard Chief of Staff tasks,
-        and falls back to local in-process LLM for ambiguous or complex reasoning.
+        Parses a natural language instruction into a validated ParsedIntent object
+        using the in-process pure C++ llama.cpp local LLM.
         """
-        fallback_data = self._heuristic_fallback(instruction)
-        
-        # Fast-track high confidence parsed intents for sub-millisecond execution
-        if fallback_data.get("confidence", 0) >= 0.9:
-            intent = ParsedIntent.model_validate(fallback_data)
-            intent.raw_instruction = instruction
-            return intent
-
         user_prompt = f"""
 {INTENT_FEW_SHOTS}
 
 Now analyze this instruction:
 User: "{instruction}"
 """
+        fallback_data = self._heuristic_fallback(instruction)
+
         try:
             intent = self.client.generate_structured(
                 prompt=user_prompt,

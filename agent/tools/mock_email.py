@@ -1,6 +1,7 @@
 import uuid
 from typing import List, Dict, Any, Optional
 from agent.db.connection import DatabaseManager, db_manager
+from agent.db.schema import sync_sqlite_to_workspace_json
 from agent.tools.base import IEmailService, EmailMessage
 
 
@@ -10,7 +11,18 @@ class MockEmailAdapter(IEmailService):
 
     def search_inbox(self, query: str = "", limit: int = 10, **kwargs) -> List[EmailMessage]:
         search_term = query or kwargs.get("q") or kwargs.get("sender") or ""
-        like_query = f"%{search_term}%"
+        # Clean operator prefixes like from: or sender:
+        for prefix in ["from:", "sender:", "subject:", "to:"]:
+            if search_term.lower().startswith(prefix):
+                search_term = search_term[len(prefix):].strip()
+                break
+
+        # Extract primary intent keywords by stripping conversational fillers
+        filler_words = {"recent", "email", "emails", "mail", "message", "messages", "from", "about", "the", "in", "any", "my", "say", "saying", "what", "did"}
+        words = [w for w in search_term.split() if w.lower() not in filler_words]
+        effective_term = " ".join(words).strip() if words else search_term.strip()
+
+        like_query = f"%{effective_term}%"
         with self.manager.get_connection() as conn:
             rows = conn.execute(
                 """
@@ -24,15 +36,16 @@ class MockEmailAdapter(IEmailService):
             return [self._row_to_model(r) for r in rows]
 
     def read_email(self, email_id: str = "email_001", **kwargs) -> Optional[EmailMessage]:
-        eid = email_id or kwargs.get("id") or "email_001"
+        eid = email_id or kwargs.get("id") or kwargs.get("query") or "email_001"
         with self.manager.get_connection() as conn:
             row = conn.execute(
-                "SELECT * FROM mock_emails WHERE email_id = ?",
-                (eid,),
+                "SELECT * FROM mock_emails WHERE email_id = ? OR subject LIKE ? OR sender LIKE ? LIMIT 1",
+                (eid, f"%{eid}%", f"%{eid}%"),
             ).fetchone()
             if not row:
                 return None
-            conn.execute("UPDATE mock_emails SET is_read = 1 WHERE email_id = ?", (eid,))
+            conn.execute("UPDATE mock_emails SET is_read = 1 WHERE email_id = ?", (row["email_id"],))
+            sync_sqlite_to_workspace_json(self.manager)
             return self._row_to_model(row)
 
     def create_draft(
@@ -89,6 +102,7 @@ class MockEmailAdapter(IEmailService):
                 """,
                 (email_id, "user@acme.corp", rcpt, sbj, bdy),
             )
+        sync_sqlite_to_workspace_json(self.manager)
         return {
             "message_id": email_id,
             "recipient": rcpt,

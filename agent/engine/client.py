@@ -107,6 +107,33 @@ class LocalLLMClient:
             mock_fallback=mock_fallback,
         )
 
+    def generate_text(
+        self,
+        prompt: str,
+        system_prompt: str = "",
+        max_tokens: int = 250,
+        temperature: float = 0.2,
+    ) -> str:
+        """
+        Generates direct natural language text from in-process pure C++ llama.cpp on Metal GPU.
+        """
+        llm = self._get_llm()
+        if llm is not None:
+            try:
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": prompt})
+                output = llm.create_chat_completion(
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                return output["choices"][0]["message"]["content"].strip()
+            except Exception as e:
+                print(f"Warning: Local LLM text generation failed: {e}")
+        return ""
+
     def _clean_json_string(self, text: str) -> str:
         """Strip markdown codeblocks and extraneous characters."""
         text = text.strip()

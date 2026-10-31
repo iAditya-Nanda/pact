@@ -1,8 +1,10 @@
+import json
 import uuid
 from typing import Dict, Any, Literal
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
 from agent.core.state import AgentState
+from agent.engine.client import local_llm_client
 from agent.engine.intent_service import intent_service
 from agent.engine.planner_service import planner_service
 from agent.db.connection import db_manager
@@ -176,17 +178,32 @@ class WorkflowEngine:
             plan = ExecutionPlan.model_validate(state["plan"])
             step = next(s for s in plan.steps if s.step_id == step_id)
 
+            history = list(state.get("execution_history", []))
+            compensating_log = list(state.get("compensating_log", []))
+
+            # Resolve dependent JSONPath parameter references from prior step results
+            resolved_params = dict(step.parameters)
+            for k, v in list(resolved_params.items()):
+                if isinstance(v, str) and (v.startswith("$$.") or v.startswith("$")):
+                    for prev in reversed(history):
+                        prev_data = prev.get("data")
+                        if isinstance(prev_data, list) and prev_data:
+                            first = prev_data[0]
+                            if isinstance(first, dict):
+                                resolved_params[k] = first.get("email_id") or first.get("id") or first.get("event_id") or first.get("task_id") or str(first)
+                                break
+                        elif isinstance(prev_data, dict):
+                            resolved_params[k] = prev_data.get("email_id") or prev_data.get("id") or prev_data.get("event_id") or prev_data.get("task_id") or str(prev_data)
+                            break
+
             # Dispatch tool via ToolRegistry
             exec_result = self.registry.execute_tool(
                 tool_name=step.tool_name,
-                parameters=step.parameters,
+                parameters=resolved_params,
                 run_id=state["run_id"],
                 step_id=step.step_id,
                 idempotency_key=step.idempotency_key,
             )
-
-            history = list(state.get("execution_history", []))
-            compensating_log = list(state.get("compensating_log", []))
 
             history.append(exec_result.model_dump(mode="json"))
 
@@ -307,9 +324,27 @@ class WorkflowEngine:
                                 )
 
                     if summaries:
-                        summary = " ".join(summaries)
+                        fallback_summary = " ".join(summaries)
                     else:
-                        summary = f"Executed {len(history)} action(s) across Google Workspace with verified state consistency."
+                        fallback_summary = f"Executed {len(history)} action(s) across Google Workspace with verified state consistency."
+
+                    # Dynamic synthesis using pure C++ local LLM on Metal GPU
+                    raw_inst = state.get("raw_instruction", "")
+                    llm_prompt = f"""User Instruction: "{raw_inst}"
+
+Real Tool Execution Results:
+{chr(10).join(summaries)}
+
+Synthesize a direct, concise, high-value executive update for the user answering their instruction based strictly on these tool results."""
+
+                    ai_synth = local_llm_client.generate_text(
+                        prompt=llm_prompt,
+                        system_prompt="You are PACT, an executive AI Chief of Staff. Synthesize a concise, clear, and professional response directly addressing the user's request based strictly on the tool execution results. Avoid repetitive preambles.",
+                        max_tokens=220,
+                        temperature=0.2,
+                    )
+
+                    summary = ai_synth if ai_synth and len(ai_synth.strip()) > 15 else fallback_summary
 
             return {
                 "final_summary": summary,

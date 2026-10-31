@@ -47,20 +47,16 @@ Return the ExecutionPlan JSON with run_id="{active_run_id}" and plan_id="plan_{u
 """
         fallback_plan = self._deterministic_fallback_plan(intent, active_run_id)
 
-        # Fast-track high-confidence standard plans for sub-millisecond execution
-        if intent.confidence >= 0.9 and fallback_plan:
+        try:
+            plan = self.client.generate_structured(
+                prompt=prompt,
+                system_prompt=DAG_PLANNER_SYSTEM_PROMPT,
+                response_model=ExecutionPlan,
+                model_name=self.client.config.tier_b_model,
+                mock_fallback=fallback_plan,
+            )
+        except Exception:
             plan = ExecutionPlan.model_validate(fallback_plan)
-        else:
-            try:
-                plan = self.client.generate_structured(
-                    prompt=prompt,
-                    system_prompt=DAG_PLANNER_SYSTEM_PROMPT,
-                    response_model=ExecutionPlan,
-                    model_name=self.client.config.tier_b_model,
-                    mock_fallback=fallback_plan,
-                )
-            except Exception:
-                plan = ExecutionPlan.model_validate(fallback_plan)
 
         # Enforce run_id and compute deterministic idempotency keys on all steps
         plan.run_id = active_run_id
@@ -76,9 +72,24 @@ Return the ExecutionPlan JSON with run_id="{active_run_id}" and plan_id="plan_{u
         if filtered_steps:
             plan.steps = filtered_steps
 
+        # Strict intent guardrails: Prevent LLM over-planning destructive actions not requested by the user
+        lower_inst = (intent.raw_instruction or "").lower()
+        if not any(w in lower_inst for w in ["complete", "finish", "done", "mark as completed"]):
+            plan.steps = [s for s in plan.steps if s.tool_name != "complete_task"]
+        if not any(w in lower_inst for w in ["cancel", "delete", "remove", "drop"]):
+            plan.steps = [s for s in plan.steps if s.tool_name != "cancel_calendar_event"]
+        if not any(w in lower_inst for w in ["reschedule", "move", "postpone", "delay", "shift"]):
+            plan.steps = [s for s in plan.steps if s.tool_name != "reschedule_calendar_event"]
+
         for step in plan.steps:
             # Auto-enforce TIER_1_CONSEQUENTIAL for known mutating tools, TIER_0_SAFE for read-only
-            if step.tool_name in ["send_email", "reschedule_calendar_event", "cancel_calendar_event", "complete_task"]:
+            if step.tool_name in [
+                "send_email",
+                "create_calendar_event",
+                "reschedule_calendar_event",
+                "cancel_calendar_event",
+                "complete_task",
+            ]:
                 step.risk_tier = RiskTier.TIER_1_CONSEQUENTIAL
             else:
                 step.risk_tier = RiskTier.TIER_0_SAFE

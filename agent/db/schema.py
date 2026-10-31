@@ -120,12 +120,28 @@ CREATE INDEX IF NOT EXISTS idx_sec_events_user ON security_events(user_id);
 """
 
 
-def init_database(manager: DatabaseManager = db_manager) -> None:
+def init_database(manager: DatabaseManager = db_manager, sync_live: bool = True) -> None:
     """Initialize all core tables and indices, and sync live workspace data."""
     with manager.get_connection() as conn:
         conn.executescript(SCHEMA_SQL)
     seed_mock_data(manager)
-    sync_workspace_data(manager)
+    if sync_live and str(manager.db_path).endswith("pact_agent.db"):
+        sync_workspace_data(manager)
+
+
+def normalize_time_str(time_str: str) -> str:
+    """Normalizes 12h or raw string time to standard ISO timestamp for SQLite range queries."""
+    if not time_str:
+        return "2026-10-31 10:00:00"
+    clean = time_str.strip()
+    if clean.startswith("2026-"):
+        return clean
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(clean, "%I:%M %p")
+        return f"2026-10-31 {dt.strftime('%H:%M:%S')}"
+    except Exception:
+        return f"2026-10-31 10:00:00"
 
 
 def sync_workspace_data(manager: DatabaseManager = db_manager) -> None:
@@ -181,13 +197,16 @@ def sync_workspace_data(manager: DatabaseManager = db_manager) -> None:
                     (eid, sender, user_email, subject, snippet, priority, is_read, received_at),
                 )
 
-            # 2. Sync Calendar Events
+            # 2. Sync Calendar Events (preserve default core events evt_001 / evt_002)
             for evt in data.get("calendarEvents", []):
                 ev_id = evt.get("id")
+                if ev_id in ["evt_001", "evt_002"]:
+                    ev_id = f"ws_{ev_id}"
+
                 title = evt.get("title", "Event")
                 desc = evt.get("description", "")
-                start_time = evt.get("startTime", "10:00 AM")
-                end_time = evt.get("endTime", "11:00 AM")
+                start_time = normalize_time_str(evt.get("startTime", "10:00 AM"))
+                end_time = normalize_time_str(evt.get("endTime", "11:00 AM"))
                 status = str(evt.get("status", "CONFIRMED")).upper()
 
                 conn.execute(
@@ -230,6 +249,104 @@ def sync_workspace_data(manager: DatabaseManager = db_manager) -> None:
                 )
     except Exception as e:
         print(f"Warning: Failed to sync workspace.json to SQLite: {e}")
+
+
+def sync_sqlite_to_workspace_json(manager: DatabaseManager = db_manager) -> None:
+    """
+    Exports live SQLite tables back to web/.data/workspace.json so that UI components
+    reflect AI modifications (new tasks, sent emails, rescheduled events) in real time.
+    """
+    import json
+    from pathlib import Path
+
+    workspace_candidates = [
+        Path(__file__).resolve().parent.parent.parent / "web" / ".data" / "workspace.json",
+        Path(__file__).resolve().parent.parent.parent / ".data" / "workspace.json",
+    ]
+
+    workspace_file = None
+    for cand in workspace_candidates:
+        if cand.exists():
+            workspace_file = cand
+            break
+
+    if not workspace_file:
+        return
+
+    try:
+        data = json.loads(workspace_file.read_text(encoding="utf-8"))
+
+        with manager.get_connection() as conn:
+            # 1. Export Tasks
+            task_rows = conn.execute("SELECT * FROM mock_tasks ORDER BY due_date ASC;").fetchall()
+            exported_tasks = []
+            active_count = 0
+            for r in task_rows:
+                is_completed = r["status"] == "COMPLETED"
+                if not is_completed:
+                    active_count += 1
+                exported_tasks.append({
+                    "id": r["task_id"],
+                    "title": r["title"],
+                    "description": r["description"] or "",
+                    "dueDate": r["due_date"] or "Today",
+                    "priority": (r["priority"] or "normal").lower(),
+                    "status": "completed" if is_completed else "pending",
+                    "isDueToday": True,
+                    "isOverdue": False,
+                })
+            data["tasks"] = exported_tasks
+            if "metrics" in data:
+                data["metrics"]["activeTasks"] = active_count
+
+            # 2. Export Calendar Events
+            cal_rows = conn.execute("SELECT * FROM mock_calendar_events WHERE status != 'CANCELLED' ORDER BY start_time ASC;").fetchall()
+            exported_cal = []
+            for r in cal_rows:
+                exported_cal.append({
+                    "id": r["event_id"],
+                    "title": r["title"],
+                    "description": r["description"] or "",
+                    "startTime": r["start_time"],
+                    "endTime": r["end_time"],
+                    "location": "Google Meet",
+                    "status": "confirmed",
+                    "conflictDetected": False,
+                    "isToday": True,
+                    "hours": 1.0,
+                })
+            data["calendarEvents"] = exported_cal
+            if "metrics" in data:
+                data["metrics"]["meetingsToday"] = len(exported_cal)
+
+            # 3. Export Emails
+            email_rows = conn.execute("SELECT * FROM mock_emails ORDER BY received_at DESC;").fetchall()
+            exported_emails = []
+            unread_count = 0
+            for r in email_rows:
+                is_read = bool(r["is_read"])
+                if not is_read:
+                    unread_count += 1
+                exported_emails.append({
+                    "id": r["email_id"],
+                    "sender": r["sender"],
+                    "senderEmail": r["sender"] if "@" in r["sender"] else f"{r['sender'].lower().replace(' ', '.')}@gmail.com",
+                    "subject": r["subject"],
+                    "snippet": r["body"] or "",
+                    "receivedAt": r["received_at"] or "Recently",
+                    "priority": (r["priority"] or "normal").lower(),
+                    "status": "read" if is_read else "unread",
+                    "thisMonth": True,
+                })
+            data["emails"] = exported_emails
+            if "metrics" in data:
+                data["metrics"]["unreadEmails"] = unread_count
+                data["metrics"]["emailsThisMonth"] = len(exported_emails)
+
+        workspace_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"Warning: Failed to export SQLite to workspace.json: {e}")
+
 
 
 

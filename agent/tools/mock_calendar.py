@@ -2,6 +2,7 @@ import uuid
 import json
 from typing import List, Dict, Any, Optional
 from agent.db.connection import DatabaseManager, db_manager
+from agent.db.schema import sync_sqlite_to_workspace_json
 from agent.tools.base import ICalendarService, CalendarEvent
 
 
@@ -83,6 +84,7 @@ class MockCalendarAdapter(ICalendarService):
                 """,
                 (event_id, t_title, description, s_time, e_time, json.dumps(attendees_list)),
             )
+        sync_sqlite_to_workspace_json(self.manager)
         return {
             "event_id": event_id,
             "title": t_title,
@@ -108,14 +110,14 @@ class MockCalendarAdapter(ICalendarService):
         """
         Reschedules an event and preserves original timestamps for 1-click compensating rollback.
         """
-        evt_id = event_id or kwargs.get("id") or "evt_001"
+        evt_id = event_id or kwargs.get("id") or kwargs.get("title") or "evt_001"
         s_start = new_start or kwargs.get("start_time") or "2026-10-31 14:00:00"
         s_end = new_end or kwargs.get("end_time") or "2026-10-31 15:00:00"
 
         with self.manager.get_connection() as conn:
             existing = conn.execute(
-                "SELECT * FROM mock_calendar_events WHERE event_id = ?",
-                (evt_id,),
+                "SELECT * FROM mock_calendar_events WHERE event_id = ? OR title LIKE ? LIMIT 1",
+                (evt_id, f"%{evt_id}%"),
             ).fetchone()
             if not existing:
                 # If target event not found, fallback to first available confirmed event
@@ -126,6 +128,8 @@ class MockCalendarAdapter(ICalendarService):
                     evt_id = existing["event_id"]
                 else:
                     raise ValueError(f"Calendar event '{evt_id}' not found.")
+            else:
+                evt_id = existing["event_id"]
 
             original_start = existing["start_time"]
             original_end = existing["end_time"]
@@ -138,6 +142,7 @@ class MockCalendarAdapter(ICalendarService):
                 """,
                 (s_start, s_end, evt_id),
             )
+        sync_sqlite_to_workspace_json(self.manager)
 
         return {
             "event_id": evt_id,
@@ -165,16 +170,19 @@ class MockCalendarAdapter(ICalendarService):
         idempotency_key: str = "",
         **kwargs,
     ) -> Dict[str, Any]:
-        evt_id = event_id or kwargs.get("id") or "evt_001"
+        evt_id = event_id or kwargs.get("id") or kwargs.get("title") or "evt_001"
         with self.manager.get_connection() as conn:
             existing = conn.execute(
-                "SELECT * FROM mock_calendar_events WHERE event_id = ?",
-                (evt_id,),
+                "SELECT * FROM mock_calendar_events WHERE event_id = ? OR title LIKE ? LIMIT 1",
+                (evt_id, f"%{evt_id}%"),
             ).fetchone()
+            if existing:
+                evt_id = existing["event_id"]
             conn.execute(
                 "UPDATE mock_calendar_events SET status = 'CANCELLED' WHERE event_id = ?",
                 (evt_id,),
             )
+        sync_sqlite_to_workspace_json(self.manager)
         return {
             "event_id": evt_id,
             "status": "CANCELLED",

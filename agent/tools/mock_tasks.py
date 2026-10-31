@@ -1,6 +1,7 @@
 import uuid
 from typing import List, Dict, Any, Optional
 from agent.db.connection import DatabaseManager, db_manager
+from agent.db.schema import sync_sqlite_to_workspace_json
 from agent.tools.base import ITaskService, TaskItem
 
 
@@ -48,6 +49,7 @@ class MockTaskAdapter(ITaskService):
                 """,
                 (task_id, t_title, description, d_due, priority),
             )
+        sync_sqlite_to_workspace_json(self.manager)
         return TaskItem(
             task_id=task_id,
             title=t_title,
@@ -63,14 +65,22 @@ class MockTaskAdapter(ITaskService):
         idempotency_key: str = "",
         **kwargs,
     ) -> Dict[str, Any]:
-        tid = task_id or kwargs.get("id") or "task_001"
+        tid = task_id or kwargs.get("id") or kwargs.get("title") or "task_001"
         with self.manager.get_connection() as conn:
+            existing = conn.execute(
+                "SELECT * FROM mock_tasks WHERE task_id = ? OR title LIKE ? LIMIT 1",
+                (tid, f"%{tid}%"),
+            ).fetchone()
+            if existing:
+                tid = existing["task_id"]
             conn.execute(
                 "UPDATE mock_tasks SET status = 'COMPLETED' WHERE task_id = ?",
                 (tid,),
             )
+        sync_sqlite_to_workspace_json(self.manager)
         return {
             "task_id": tid,
+            "title": existing["title"] if existing else tid,
             "status": "COMPLETED",
             "completed": True,
             # Compensating action to uncomplete / reopen task
@@ -86,12 +96,19 @@ class MockTaskAdapter(ITaskService):
         idempotency_key: str = "",
         **kwargs,
     ) -> Dict[str, Any]:
-        tid = task_id or kwargs.get("id") or "task_001"
+        tid = task_id or kwargs.get("id") or kwargs.get("title") or "task_001"
         with self.manager.get_connection() as conn:
+            existing = conn.execute(
+                "SELECT * FROM mock_tasks WHERE task_id = ? OR title LIKE ? LIMIT 1",
+                (tid, f"%{tid}%"),
+            ).fetchone()
+            if existing:
+                tid = existing["task_id"]
             conn.execute(
                 "UPDATE mock_tasks SET status = 'PENDING' WHERE task_id = ?",
                 (tid,),
             )
+        sync_sqlite_to_workspace_json(self.manager)
         return {"task_id": tid, "status": "PENDING", "completed": False}
 
     def _row_to_model(self, row) -> TaskItem:

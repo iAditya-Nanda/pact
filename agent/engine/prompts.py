@@ -22,9 +22,11 @@ Valid Actions:
 - CLARIFY (information is too vague or missing critical details)
 
 Guidelines:
-1. Extract all entities accurately: people, emails, dates, times, durations, task titles.
-2. If critical details are missing to execute the request, set requires_clarification=true and provide clarification_prompt.
-3. Output MUST strictly match the requested JSON schema.
+1. Extract all entities accurately: people, emails, dates, times, durations, task titles, search keywords.
+2. For QUERY actions (searching emails, reading inbox, listing tasks or calendar events), DO NOT require clarification if any keyword, subject, sender, or concept is provided (e.g. "Adobe", "Renee", "unread", "today"). Set requires_clarification=false and extract query/sender/topic into entities.
+3. For CALENDAR actions (rescheduling, moving, updating meetings), if a person (e.g. "with Sarah", "with David"), title, or time is specified, DO NOT require clarification. Set requires_clarification=false, action=UPDATE, and extract the person, time, and date into entities.
+4. Only set requires_clarification=true if a destructive or modifying action is requested with completely zero context (e.g. bare "reschedule my meeting" or "cancel my meeting" without specifying any person, title, or time).
+5. Output MUST strictly match the requested JSON schema.
 """
 
 INTENT_FEW_SHOTS = """
@@ -48,24 +50,58 @@ Output:
 }
 
 Example 2:
-User: "Check my email from Sarah about the release checklist, see when the task is due, and hold 30m on my calendar."
+User: "Search for any email from Adobe and tell me what it is about"
 Output:
 {
-  "category": "CROSS_APP",
-  "action": "EXECUTE",
-  "confidence": 0.99,
+  "category": "EMAIL",
+  "action": "QUERY",
+  "confidence": 0.98,
   "entities": {
-    "sender": "Sarah",
-    "topic": "release checklist",
-    "requested_duration_minutes": 30
+    "query": "Adobe",
+    "sender": "Adobe"
   },
   "missing_fields": [],
   "requires_clarification": false,
   "clarification_prompt": null,
-  "raw_instruction": "Check my email from Sarah about the release checklist, see when the task is due, and hold 30m on my calendar."
+  "raw_instruction": "Search for any email from Adobe and tell me what it is about"
 }
 
 Example 3:
+User: "Send email to samridhisharma041@gmail.com with subject Q4 Planning"
+Output:
+{
+  "category": "EMAIL",
+  "action": "CREATE",
+  "confidence": 0.99,
+  "entities": {
+    "recipient": "samridhisharma041@gmail.com",
+    "to": "samridhisharma041@gmail.com",
+    "subject": "Q4 Planning"
+  },
+  "missing_fields": [],
+  "requires_clarification": false,
+  "clarification_prompt": null,
+  "raw_instruction": "Send email to samridhisharma041@gmail.com with subject Q4 Planning"
+}
+
+Example 4:
+User: "Summarize my unread emails"
+Output:
+{
+  "category": "EMAIL",
+  "action": "QUERY",
+  "confidence": 0.98,
+  "entities": {
+    "query": "unread",
+    "status": "unread"
+  },
+  "missing_fields": [],
+  "requires_clarification": false,
+  "clarification_prompt": null,
+  "raw_instruction": "Summarize my unread emails"
+}
+
+Example 5:
 User: "Reschedule my meeting."
 Output:
 {
@@ -101,7 +137,11 @@ Available Tools:
 
 Rules:
 1. Safe tools (TIER_0_SAFE) do NOT require human approval and execute autonomously.
-2. Any action that sends communication, modifies existing events, or cancels appointments MUST be marked TIER_1_CONSEQUENTIAL.
+2. Any action that sends communication, modifies existing events, cancels appointments, or completes tasks MUST be marked TIER_1_CONSEQUENTIAL.
 3. Steps that depend on data from earlier steps MUST list those ancestor step_ids in their 'dependencies' array.
-4. Output MUST strictly match the requested JSON schema for ExecutionPlan.
+4. Only plan the specific action requested by the user:
+   - For creating a task, ONLY plan create_task. Do NOT plan complete_task unless the user explicitly requests to complete or finish a task.
+   - For listing tasks or checking emails, only plan read-only query tools.
+   - For scheduling an event, only plan check_calendar_conflicts and create_calendar_event.
+5. Output MUST strictly match the requested JSON schema for ExecutionPlan.
 """

@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Modal } from "@/components/ui/Modal";
 import { WorkspaceWindow, WorkspaceChatPanel } from "@/components/workspace-window";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+import { SpotlightTour } from "@/components/spotlight";
 import { WorkspaceData } from "@/lib/workspace-service";
 import {
   speakText,
@@ -52,6 +53,9 @@ export default function DashboardPage() {
   const [activeAppWindow, setActiveAppWindow] = useState<"gmail" | "calendar" | "tasks" | null>(null);
   const [isWindowMaximized, setIsWindowMaximized] = useState(false);
 
+  // Spotlight 1-minute AI Executive Pitch Tour
+  const [isTourOpen, setIsTourOpen] = useState(false);
+
   useEffect(() => {
     setMounted(true);
     if (typeof window !== "undefined") {
@@ -67,6 +71,12 @@ export default function DashboardPage() {
       setIsDark(shouldBeDark);
       document.documentElement.classList.toggle("dark", shouldBeDark);
       document.body.classList.toggle("dark", shouldBeDark);
+
+      // Trigger tour if requested by URL query (e.g. from mobile or deep link)
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tour") === "true" || params.get("pitch") === "true") {
+        setTimeout(() => setIsTourOpen(true), 600);
+      }
     }
   }, []);
 
@@ -527,6 +537,23 @@ export default function DashboardPage() {
   const executeChatCommand = async (msg: string) => {
     if (!msg.trim() || chatLoading) return;
     setChatMessages((prev) => [...prev, { sender: "user", text: msg }]);
+
+    const lower = msg.toLowerCase().trim();
+    if (
+      lower === "start tour" ||
+      lower === "pitch tour" ||
+      lower === "tour" ||
+      lower === "pitch" ||
+      lower.includes("start tour") ||
+      lower.includes("explain features")
+    ) {
+      setIsTourOpen(true);
+      const text = "Launching the 1-minute PACT AI Executive Voice Tour.";
+      setChatMessages((prev) => [...prev, { sender: "ai", text }]);
+      speakText(text, () => setIsSpeaking(true), () => setIsSpeaking(false));
+      return;
+    }
+
     setChatLoading(true);
 
     try {
@@ -674,10 +701,10 @@ export default function DashboardPage() {
         isDark ? "dark bg-[#111318] text-[#e2e2e6]" : "bg-[#f8fafd] text-[#1f1f1f]"
       } select-none transition-colors`}
     >
-      {/* 1. Header (Clean & Minimal with P.A.C.T. and Big Sign Out Icon) */}
+      {/* 1. Header (Clean & Minimal with P.A.C.T., AI Pitch Tour Trigger, Theme Toggle & Sign Out) */}
       <header className="h-16 border-b border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] px-4 lg:px-6 flex items-center justify-between shrink-0 transition-colors">
         {/* Left Branding */}
-        <div className="flex items-center gap-3">
+        <div id="tour-brand" className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#0b57d0] text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-xs">
             P
           </div>
@@ -722,15 +749,42 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Right End: Non-chip like, clean prominent icon with confirmation modal */}
-        <button
-          onClick={() => setIsLogoutModalOpen(true)}
-          className="p-2 rounded-xl text-[#444746] dark:text-[#c4c6cf] hover:text-[#ba1a1a] dark:hover:text-[#ff897d] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] transition-all cursor-pointer"
-          title="Sign Out"
-          aria-label="Sign Out"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
+        {/* Right Controls: AI Pitch Tour Button, Theme Switcher & Sign Out */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* AI Pitch Tour Trigger */}
+          <button
+            id="tour-start-btn"
+            onClick={() => setIsTourOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-linear-to-r from-[#0b57d0] via-[#6366f1] to-[#7c3aed] hover:brightness-110 active:scale-95 text-white text-xs font-bold shadow-xs flex items-center gap-2 transition-all cursor-pointer"
+            title="Start 1-Minute Executive Voice Tour & AI Pitch"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse shrink-0" />
+            <span className="tracking-tight">AI Pitch Tour</span>
+            <span className="hidden sm:inline px-1.5 py-0.2 rounded-full bg-white/20 text-3xs font-extrabold uppercase tracking-wider">
+              Voice 1m
+            </span>
+          </button>
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={handleToggleTheme}
+            className="p-2 rounded-xl text-[#444746] dark:text-[#c4c6cf] hover:text-[#0b57d0] dark:hover:text-[#a8c7fa] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] transition-all cursor-pointer"
+            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            aria-label="Toggle Theme"
+          >
+            {isDark ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5 text-[#444746]" />}
+          </button>
+
+          {/* Sign Out Button */}
+          <button
+            onClick={() => setIsLogoutModalOpen(true)}
+            className="p-2 rounded-xl text-[#444746] dark:text-[#c4c6cf] hover:text-[#ba1a1a] dark:hover:text-[#ff897d] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] active:bg-[#e4ebf5] dark:active:bg-[#34373d] transition-all cursor-pointer"
+            title="Sign Out"
+            aria-label="Sign Out"
+          >
+            <LogOut className="w-4.5 h-4.5" />
+          </button>
+        </div>
       </header>
 
       {/* Banner: Action Required when Google Workspace is not live */}
@@ -863,7 +917,7 @@ export default function DashboardPage() {
             {/* Upper Main Row: 60% Width for 3 Cards + 40% Width for Executive Panel */}
             <div className="flex flex-col lg:flex-row gap-3.5 lg:gap-4 items-stretch flex-1 min-h-0">
           {/* 3 Cards Container (Constrained to 60% Width as Requested) */}
-          <div className="w-full lg:w-[60%] grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-3.5 min-h-0">
+          <div id="tour-workspace-insights" className="w-full lg:w-[60%] grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-3.5 min-h-0">
             {/* Column 1: Gmail Insights & Info */}
             <div className="border border-[#e0e3e7] dark:border-[#34373d] rounded-2xl bg-white dark:bg-[#1d1f24] p-4 flex flex-col justify-between shadow-xs hover:border-[#0b57d0]/40 dark:hover:border-[#a8c7fa]/40 transition-all">
               <div>
@@ -1169,7 +1223,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Right Executive Panel & Quick Actions (40% Width) */}
-          <div className="w-full lg:w-[40%] flex flex-col justify-between gap-3 lg:gap-3.5 min-h-0">
+          <div id="tour-executive-panel" className="w-full lg:w-[40%] flex flex-col justify-between gap-3 lg:gap-3.5 min-h-0">
             {/* User Profile Card + Dynamic Greeting + IST Timer (Clean white, 120px avatar) */}
             <div className="bg-none p-4">
               <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-5">
@@ -1299,7 +1353,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Bottom: Execution Autonomy Mode */}
-              <div className="pt-2 border-t border-[#e0e3e7]/80 dark:border-[#34373d]">
+              <div id="tour-ai-mode" className="pt-2 border-t border-[#e0e3e7]/80 dark:border-[#34373d]">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-[#1f1f1f] dark:text-white">
                     <Zap className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
@@ -1349,7 +1403,7 @@ export default function DashboardPage() {
         {/* 3. Bottom Row */}
         <div className="flex flex-col lg:flex-row items-center gap-3 lg:gap-4 shrink-0">
           {/* Bottom Left: Connected Workspace Apps (No card box, clean transparent display) */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div id="tour-workspace-launcher" className="flex items-center gap-2.5 shrink-0">
             <span className="text-2xs font-bold text-[#747775] dark:text-[#8e9099] uppercase tracking-wider hidden sm:inline">
               Apps
             </span>
@@ -1426,7 +1480,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Bottom Middle: Chat Input for the AI (Spacious central bar) */}
-          <div className="w-full flex-1 min-w-0 border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] rounded-2xl p-2.5 lg:p-3 shadow-xs flex flex-col justify-between">
+          <div id="tour-chat-interface" className="w-full flex-1 min-w-0 border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] rounded-2xl p-2.5 lg:p-3 shadow-xs flex flex-col justify-between">
             {chatMessages.length > 0 && (
               <div className="mb-2 p-2 rounded-xl bg-[#f0f4f9] dark:bg-[#282a2f] border border-[#e0e3e7]/80 dark:border-[#34373d] flex items-start justify-between gap-2 text-xs animate-in fade-in duration-200">
                 <div className="flex items-start gap-1.5 min-w-0">
@@ -1752,6 +1806,13 @@ export default function DashboardPage() {
           </div>
         </div>
       </Modal>
+
+      {/* 1-Minute Executive Voice Tour & Feature Pitch Spotlight */}
+      <SpotlightTour
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+        onNavigateToTab={(tab) => setActiveAppWindow(tab)}
+      />
     </div>
   );
 }

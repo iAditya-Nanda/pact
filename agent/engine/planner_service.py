@@ -83,9 +83,10 @@ Return the ExecutionPlan JSON with run_id="{active_run_id}" and plan_id="plan_{u
     def _deterministic_fallback_plan(self, intent: ParsedIntent, run_id: str) -> dict:
         """Deterministic plan generator matching intent patterns."""
         plan_id = f"plan_{uuid.uuid4().hex[:8]}"
+        lower = (intent.raw_instruction or "").lower()
 
-        if intent.category == IntentCategory.CALENDAR and intent.action == ActionType.UPDATE:
-            # Typical reschedule flow
+        if intent.category == IntentCategory.CALENDAR and intent.action in [ActionType.UPDATE, ActionType.DELETE]:
+            tool_name = "cancel_calendar_event" if intent.action == ActionType.DELETE or "cancel" in lower else "reschedule_calendar_event"
             step1 = {
                 "step_id": "step_1",
                 "tool_name": "check_calendar_conflicts",
@@ -97,7 +98,7 @@ Return the ExecutionPlan JSON with run_id="{active_run_id}" and plan_id="plan_{u
             }
             step2 = {
                 "step_id": "step_2",
-                "tool_name": "reschedule_calendar_event",
+                "tool_name": tool_name,
                 "risk_tier": RiskTier.TIER_1_CONSEQUENTIAL.value,
                 "parameters": intent.entities,
                 "dependencies": ["step_1"],
@@ -105,6 +106,37 @@ Return the ExecutionPlan JSON with run_id="{active_run_id}" and plan_id="plan_{u
                 "status": StepStatus.PENDING.value,
             }
             steps = [step1, step2]
+        elif intent.category == IntentCategory.EMAIL and (intent.action in [ActionType.CREATE, ActionType.EXECUTE] or "send" in lower):
+            step1 = {
+                "step_id": "step_1",
+                "tool_name": "draft_email",
+                "risk_tier": RiskTier.TIER_0_SAFE.value,
+                "parameters": intent.entities,
+                "dependencies": [],
+                "idempotency_key": "",
+                "status": StepStatus.PENDING.value,
+            }
+            step2 = {
+                "step_id": "step_2",
+                "tool_name": "send_email",
+                "risk_tier": RiskTier.TIER_1_CONSEQUENTIAL.value,
+                "parameters": intent.entities,
+                "dependencies": ["step_1"],
+                "idempotency_key": "",
+                "status": StepStatus.PENDING.value,
+            }
+            steps = [step1, step2]
+        elif intent.category == IntentCategory.TASK and intent.action in [ActionType.UPDATE, ActionType.DELETE]:
+            step1 = {
+                "step_id": "step_1",
+                "tool_name": "complete_task",
+                "risk_tier": RiskTier.TIER_1_CONSEQUENTIAL.value,
+                "parameters": intent.entities,
+                "dependencies": [],
+                "idempotency_key": "",
+                "status": StepStatus.PENDING.value,
+            }
+            steps = [step1]
         elif intent.category == IntentCategory.CROSS_APP:
             # Cross-app: email search -> task deadline check -> calendar hold -> draft reply
             step1 = {

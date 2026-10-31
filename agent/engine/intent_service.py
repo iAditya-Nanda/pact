@@ -34,16 +34,47 @@ User: "{instruction}"
 
     def _heuristic_fallback(self, instruction: str) -> dict:
         """Lightweight regex/keyword fallback for headless offline test execution."""
-        lower = instruction.lower()
-        if any(w in lower for w in ["email", "inbox", "mail"]):
-            category = IntentCategory.EMAIL
-            action = ActionType.CREATE if "send" in lower or "draft" in lower else ActionType.QUERY
-        elif any(w in lower for w in ["meeting", "schedule", "calendar", "reschedule", "event"]):
+        lower = instruction.lower().strip()
+
+        # Check for ambiguity requiring clarification:
+        if lower in ["cancel my meeting", "cancel meeting", "reschedule my meeting", "move my meeting"]:
+            return {
+                "category": IntentCategory.CALENDAR.value,
+                "action": ActionType.DELETE.value if "cancel" in lower else ActionType.UPDATE.value,
+                "confidence": 0.9,
+                "entities": {"raw": instruction},
+                "missing_fields": ["event_id", "time"],
+                "requires_clarification": True,
+                "clarification_prompt": "Which meeting would you like to cancel? Please specify the title, attendee, or time.",
+                "raw_instruction": instruction,
+            }
+
+        if any(w in lower for w in ["meeting", "schedule", "calendar", "reschedule", "event", "sync"]):
             category = IntentCategory.CALENDAR
-            action = ActionType.UPDATE if "reschedule" in lower else ActionType.CREATE
+            if any(w in lower for w in ["cancel", "delete", "remove", "drop"]):
+                action = ActionType.DELETE
+            elif any(w in lower for w in ["move", "reschedule", "shift", "postpone", "delay", "change"]):
+                action = ActionType.UPDATE
+            elif any(w in lower for w in ["check", "find", "list", "show", "free", "conflict"]):
+                action = ActionType.QUERY
+            else:
+                action = ActionType.CREATE
+        elif any(w in lower for w in ["email", "inbox", "mail"]):
+            category = IntentCategory.EMAIL
+            if any(w in lower for w in ["send", "reply", "forward", "draft", "write"]):
+                action = ActionType.CREATE
+            elif any(w in lower for w in ["delete", "trash", "remove"]):
+                action = ActionType.DELETE
+            else:
+                action = ActionType.QUERY
         elif any(w in lower for w in ["task", "todo", "deadline"]):
             category = IntentCategory.TASK
-            action = ActionType.CREATE if "add" in lower or "create" in lower else ActionType.QUERY
+            if any(w in lower for w in ["add", "create", "new"]):
+                action = ActionType.CREATE
+            elif any(w in lower for w in ["complete", "finish", "done", "delete"]):
+                action = ActionType.UPDATE
+            else:
+                action = ActionType.QUERY
         else:
             category = IntentCategory.CROSS_APP
             action = ActionType.EXECUTE

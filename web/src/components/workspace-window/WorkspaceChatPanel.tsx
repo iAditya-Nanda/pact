@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import {
-  Sparkles,
   Send,
   Mic,
   MicOff,
@@ -11,7 +10,6 @@ import {
   MessageSquare,
   Bot,
   User,
-  ArrowRight,
   Volume2,
   VolumeX,
   CheckCircle,
@@ -80,7 +78,7 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
   const suggestionsByApp = {
     gmail: [
       "Summarize unread priority emails",
-      "Draft reply to Renee at Cline about Kimi K3.1",
+      "Draft reply to Renee about Kimi K3.1",
       "Send email to samridhisharma041@gmail.com",
     ],
     calendar: [
@@ -105,65 +103,50 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
       : "Google Tasks";
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-[#1d1f24] border-l border-[#e0e3e7] dark:border-[#34373d] text-[#1f1f1f] dark:text-[#e2e2e6] overflow-hidden">
-      {/* Top Header */}
-      <div className="h-14 px-4 border-b border-[#e0e3e7] dark:border-[#34373d] bg-[#f8fafd] dark:bg-[#1f2229] flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-[#0b57d0] text-white flex items-center justify-center shadow-xs shrink-0">
-            <Sparkles className="w-4 h-4" />
+    <div className="h-full flex flex-col rounded-2xl border border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#1d1f24] shadow-2xl overflow-hidden text-[#1f1f1f] dark:text-[#e2e2e6] transition-all">
+      {/* Top Header - Matching macOS Window Title Bar Height & Style */}
+      <div className="h-11 px-4 bg-[#f0f4f9] dark:bg-[#16181d] border-b border-[#e0e3e7] dark:border-[#34373d] flex items-center justify-between shrink-0 select-none">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-6 h-6 rounded-lg bg-[#0b57d0] text-white flex items-center justify-center shadow-xs shrink-0">
+            <MessageSquare className="w-3.5 h-3.5" />
           </div>
-          <div className="min-w-0">
-            <div className="text-xs font-bold text-[#1f1f1f] dark:text-white truncate flex items-center gap-1.5">
-              <span>PACT AI Co-Pilot</span>
-              {isSpeaking && (
-                <span className="px-1.5 py-0.2 rounded-full bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] text-3xs font-semibold flex items-center gap-1 animate-pulse">
-                  <Volume2 className="w-2.5 h-2.5 animate-spin" />
-                  <span>Speaking</span>
-                </span>
-              )}
-            </div>
-            <div className="text-3xs text-[#747775] dark:text-[#8e9099] flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#1e8e3e] animate-pulse" />
-              <span>Context: {appNameFormatted}</span>
-            </div>
+          <div className="flex items-baseline gap-1.5 truncate">
+            <span className="text-xs font-bold text-[#1f1f1f] dark:text-white truncate">
+              AI Co-Pilot
+            </span>
+            <span className="text-3xs text-[#747775] dark:text-[#8e9099] truncate hidden sm:inline">
+              • {appNameFormatted}
+            </span>
           </div>
+          {isSpeaking && (
+            <span className="px-1.5 py-0.2 rounded-full bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] text-3xs font-semibold flex items-center gap-1 animate-pulse shrink-0">
+              <Volume2 className="w-2.5 h-2.5" />
+              <span>Voice</span>
+            </span>
+          )}
         </div>
 
-        {/* Right Controls: Voice Toggle + Mode Switcher */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {onToggleMute && (
-            <button
-              onClick={onToggleMute}
-              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                isAudioMuted
-                  ? "bg-[#fce8e6] dark:bg-[#3b1816] text-[#c5221f] dark:text-[#f28b82] border-[#fce8e6] dark:border-[#5c2420]"
-                  : "bg-white dark:bg-[#16181d] text-[#0b57d0] dark:text-[#a8c7fa] border-[#e0e3e7] dark:border-[#34373d]"
-              }`}
-              title={isAudioMuted ? "Voice response muted. Click to enable speech." : "Voice response active (Speaks responses aloud). Click to mute."}
-            >
-              {isAudioMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-            </button>
-          )}
-
-          <div className="flex items-center p-0.5 rounded-xl bg-white dark:bg-[#16181d] border border-[#e0e3e7] dark:border-[#34373d]">
+        {/* Right Controls: Safe/Turbo Mode Switcher + Voice Mute */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center p-0.5 rounded-lg bg-white/70 dark:bg-[#1f2229] border border-[#e0e3e7]/80 dark:border-[#34373d]">
             <button
               onClick={() => onSelectAiMode("safe")}
-              className={`px-2 py-0.5 rounded-lg text-3xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+              className={`px-2 py-0.5 rounded-md text-3xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                 aiMode === "safe"
-                  ? "bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa] shadow-2xs"
-                  : "text-[#747775] dark:text-[#8e9099]"
+                  ? "bg-[#0b57d0] text-white shadow-2xs font-bold"
+                  : "text-[#747775] dark:text-[#8e9099] hover:text-[#1f1f1f] dark:hover:text-white"
               }`}
-              title="Safe Mode: Requires human clearance before execution"
+              title="Safe Mode: Explicit clearance required"
             >
               <ShieldCheck className="w-2.5 h-2.5" />
               <span>Safe</span>
             </button>
             <button
               onClick={() => onSelectAiMode("turbo")}
-              className={`px-2 py-0.5 rounded-lg text-3xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+              className={`px-2 py-0.5 rounded-md text-3xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                 aiMode === "turbo"
-                  ? "bg-[#fff3e0] dark:bg-[#4a2800] text-[#e65100] dark:text-[#ffb77d] shadow-2xs"
-                  : "text-[#747775] dark:text-[#8e9099]"
+                  ? "bg-[#e65100] text-white shadow-2xs font-bold"
+                  : "text-[#747775] dark:text-[#8e9099] hover:text-[#1f1f1f] dark:hover:text-white"
               }`}
               title="Turbo Mode: Autonomous execution"
             >
@@ -171,50 +154,61 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
               <span>Turbo</span>
             </button>
           </div>
+
+          {onToggleMute && (
+            <button
+              onClick={onToggleMute}
+              className={`p-1 rounded-lg text-[#747775] hover:text-[#1f1f1f] dark:hover:text-white transition-colors cursor-pointer ${
+                isAudioMuted ? "text-[#ea4335]" : ""
+              }`}
+              title={isAudioMuted ? "Unmute voice response" : "Mute voice response"}
+            >
+              {isAudioMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3.5">
-        {/* Welcome greeting */}
-        <div className="p-3.5 rounded-2xl bg-[#f8fafd] dark:bg-[#232730] border border-[#e0e3e7] dark:border-[#34373d] text-left">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Bot className="w-4 h-4 text-[#0b57d0] dark:text-[#a8c7fa]" />
-            <span className="text-xs font-bold text-[#1f1f1f] dark:text-white">
-              AI Chief of Staff
-            </span>
+      <div className="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-3">
+        {/* Minimal Welcome Tip when no messages */}
+        {messages.length === 0 && (
+          <div className="p-3 rounded-xl bg-[#f8fafd] dark:bg-[#232730] border border-[#e0e3e7]/80 dark:border-[#34373d] text-left">
+            <div className="flex items-center gap-1.5 mb-1 text-xs font-semibold text-[#1f1f1f] dark:text-white">
+              <Bot className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
+              <span>{appNameFormatted} Assistant</span>
+            </div>
+            <p className="text-2xs text-[#747775] dark:text-[#8e9099] leading-relaxed">
+              Ask questions, draft responses, or trigger autonomous tasks using text or voice.
+            </p>
           </div>
-          <p className="text-xs text-[#444746] dark:text-[#c4c6cf] leading-relaxed">
-            I am coordinating your {appNameFormatted} in real time. Instruct me by voice or text to draft emails,
-            resolve schedule overlaps, or automate your tasks.
-          </p>
-        </div>
+        )}
 
-        {/* Message history */}
+        {/* Message History */}
         {messages.map((m, idx) => (
           <div
             key={idx}
-            className={`flex flex-col gap-1.5 ${
+            className={`flex flex-col gap-1 ${
               m.sender === "user" ? "items-end" : "items-start"
             }`}
           >
             <div
-              className={`flex items-start gap-2.5 max-w-[90%] ${
+              className={`flex items-start gap-2 max-w-[88%] ${
                 m.sender === "user" ? "flex-row-reverse" : "flex-row"
               }`}
             >
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-3xs font-bold ${
+                className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-3xs font-bold mt-0.5 ${
                   m.sender === "user"
                     ? "bg-[#0b57d0] text-white"
                     : "bg-[#e8f0fe] dark:bg-[#004a77] text-[#0b57d0] dark:text-[#a8c7fa]"
                 }`}
               >
-                {m.sender === "user" ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+                {m.sender === "user" ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
               </div>
 
               <div
-                className={`p-3 rounded-2xl text-xs text-left leading-relaxed ${
+                className={`p-2.5 rounded-2xl text-xs text-left leading-relaxed ${
                   m.sender === "user"
                     ? "bg-[#0b57d0] text-white rounded-tr-none shadow-2xs"
                     : "bg-[#f0f4f9] dark:bg-[#282a2f] text-[#1f1f1f] dark:text-[#e2e2e6] rounded-tl-none border border-[#e0e3e7]/80 dark:border-[#34373d]"
@@ -226,27 +220,22 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
 
             {/* Human-in-the-Loop Clearance Card if attached */}
             {m.hitlApproval && (
-              <div className="ml-8 mr-2 p-3 rounded-2xl bg-[#fff8e1] dark:bg-[#2b2413] border border-[#fbc02d] text-left text-xs space-y-2 shadow-2xs">
+              <div className="ml-7 mr-2 p-3 rounded-xl bg-[#fff8e1] dark:bg-[#2b2413] border border-[#fbc02d]/80 text-left text-xs space-y-2 shadow-2xs">
                 <div className="flex items-center gap-1.5 font-bold text-[#b78103] dark:text-[#fbc02d]">
                   <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>Human Clearance Required</span>
+                  <span>Clearance Required</span>
                 </div>
                 <p className="text-2xs text-[#5d4037] dark:text-[#ffe082]">
-                  {m.hitlApproval.summary || `Execute consequential action: ${m.hitlApproval.tool_name}`}
+                  {m.hitlApproval.summary || `Action: ${m.hitlApproval.tool_name}`}
                 </p>
-                {m.hitlApproval.payload_hash && (
-                  <div className="text-3xs font-mono text-[#8d6e63] dark:text-[#d7ccc8] truncate">
-                    Hash: {m.hitlApproval.payload_hash.slice(0, 16)}...
-                  </div>
-                )}
                 {onApproveAction && (
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="pt-1">
                     <button
                       onClick={() => onApproveAction(m.hitlApproval)}
-                      className="px-3 py-1 rounded-xl bg-[#0b57d0] hover:bg-[#0842a0] text-white text-2xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                      className="px-3 py-1 rounded-lg bg-[#0b57d0] hover:bg-[#0842a0] text-white text-2xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
                     >
                       <CheckCircle className="w-3 h-3" />
-                      <span>Authorize Execution</span>
+                      <span>Authorize Action</span>
                     </button>
                   </div>
                 )}
@@ -257,35 +246,32 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
 
         {isLoading && (
           <div className="flex items-center gap-2 text-xs text-[#747775] dark:text-[#8e9099] animate-pulse">
-            <Sparkles className="w-3.5 h-3.5 text-[#0b57d0] dark:text-[#a8c7fa]" />
-            <span>PACT Co-Pilot is thinking...</span>
+            <div className="w-2 h-2 rounded-full bg-[#0b57d0] dark:bg-[#a8c7fa] animate-ping" />
+            <span>Co-Pilot is working...</span>
           </div>
         )}
       </div>
 
-      {/* Suggested Prompts & Bottom Input */}
+      {/* Bottom Area: Suggestions + Compact Input Bar */}
       <div className="p-3 border-t border-[#e0e3e7] dark:border-[#34373d] bg-[#f8fafd] dark:bg-[#1f2229] shrink-0 space-y-2">
-        {/* Suggestion Chips */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-3xs font-bold text-[#747775] dark:text-[#8e9099] uppercase tracking-wider text-left">
-            Recommended Prompts
+        {/* Horizontal Scrollable Prompt Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+          <span className="text-3xs font-medium text-[#747775] dark:text-[#8e9099] shrink-0">
+            Suggested:
           </span>
-          <div className="flex flex-col gap-1">
-            {currentSuggestions.map((s, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSuggestionClick(s)}
-                className="w-full text-left px-2.5 py-1.5 rounded-xl bg-white dark:bg-[#16181d] border border-[#e0e3e7] dark:border-[#34373d] hover:border-[#0b57d0] dark:hover:border-[#a8c7fa] text-xs text-[#444746] dark:text-[#c4c6cf] hover:text-[#0b57d0] dark:hover:text-[#a8c7fa] flex items-center justify-between group transition-all cursor-pointer"
-              >
-                <span className="truncate">{s}</span>
-                <ArrowRight className="w-3 h-3 text-[#747775] group-hover:text-[#0b57d0] dark:group-hover:text-[#a8c7fa] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-            ))}
-          </div>
+          {currentSuggestions.map((s, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleSuggestionClick(s)}
+              className="px-2.5 py-1 rounded-full bg-white dark:bg-[#282a2f] border border-[#e0e3e7] dark:border-[#34373d] hover:border-[#0b57d0] dark:hover:border-[#a8c7fa] hover:text-[#0b57d0] dark:hover:text-[#a8c7fa] text-3xs font-medium text-[#444746] dark:text-[#c4c6cf] shrink-0 transition-colors cursor-pointer shadow-2xs"
+            >
+              {s}
+            </button>
+          ))}
         </div>
 
         {/* Input Bar with Voice Mic + Send */}
-        <form onSubmit={handleSend} className="flex items-center gap-2 pt-1">
+        <form onSubmit={handleSend} className="flex items-center gap-2">
           <div className="relative flex-1">
             <input
               type="text"
@@ -296,14 +282,14 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
                   ? "Listening... Speak your command now."
                   : `Ask PACT about ${appNameFormatted}...`
               }
-              className={`w-full px-3 py-2 rounded-xl border text-xs text-[#1f1f1f] dark:text-white placeholder-[#747775] focus:outline-none focus:ring-1 focus:ring-[#0b57d0] ${
+              className={`w-full px-3 py-1.5 rounded-xl border text-xs text-[#1f1f1f] dark:text-white placeholder-[#747775] focus:outline-none focus:ring-1 focus:ring-[#0b57d0] ${
                 isListening
-                  ? "border-[#ea4335] bg-[#fce8e6] dark:bg-[#3b1816] animate-pulse"
+                  ? "border-[#ea4335] bg-[#fce8e6] dark:bg-[#3b1816]"
                   : "border-[#e0e3e7] dark:border-[#34373d] bg-white dark:bg-[#16181d]"
               }`}
             />
             {isListening && (
-              <span className="absolute right-2.5 top-2.5 w-2 h-2 rounded-full bg-[#ea4335] animate-ping" />
+              <span className="absolute right-2.5 top-2.5 w-1.5 h-1.5 rounded-full bg-[#ea4335] animate-ping" />
             )}
           </div>
 
@@ -311,12 +297,12 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
             <button
               type="button"
               onClick={onToggleListening}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 border ${
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
                 isListening
-                  ? "bg-[#ea4335] text-white border-[#ea4335] shadow-xs"
-                  : "bg-white dark:bg-[#16181d] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2f] text-[#747775] dark:text-[#8e9099] border-[#e0e3e7] dark:border-[#34373d]"
+                  ? "bg-[#ea4335] text-white border-[#ea4335]"
+                  : "bg-white dark:bg-[#16181d] text-[#747775] dark:text-[#8e9099] border-[#e0e3e7] dark:border-[#34373d] hover:text-[#1f1f1f] dark:hover:text-white"
               }`}
-              title={isListening ? "Listening... Click to stop." : "Speak your instruction"}
+              title={isListening ? "Listening... Click to stop." : "Voice Input"}
             >
               {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
             </button>
@@ -325,7 +311,8 @@ export const WorkspaceChatPanel: React.FC<WorkspaceChatPanelProps> = ({
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="w-8 h-8 rounded-xl bg-[#0b57d0] hover:bg-[#0842a0] disabled:opacity-40 text-white flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs"
+            className="p-1.5 rounded-lg bg-[#0b57d0] hover:bg-[#0842a0] disabled:opacity-40 text-white flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-2xs"
+            title="Send"
           >
             <Send className="w-3.5 h-3.5" />
           </button>

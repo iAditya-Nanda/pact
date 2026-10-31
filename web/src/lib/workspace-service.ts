@@ -114,6 +114,7 @@ export interface WorkspaceData {
   tasks: WorkspaceTask[];
   pendingActions: WorkspaceAction[];
   isLiveGoogleData?: boolean;
+  urgentCallTrigger?: any;
 }
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -545,3 +546,66 @@ export function deleteWorkspaceTask(identifier: string) {
   return { success: false, message: "Task not found" };
 }
 
+
+
+export function simulateUrgentEmailCall() {
+  const workspace = readWorkspace();
+  const id = `call_${Date.now()}`;
+  const nowStr = "Just now";
+
+  const urgentEmail: WorkspaceEmail = {
+    id: `msg_sim_${Date.now()}`,
+    sender: "Elena Rostova (Executive Director)",
+    senderEmail: "elena.rostova@partner-holding.com",
+    subject: "CRITICAL: Urgent Authorization Needed for System Migration Window",
+    snippet: "Aditya, the cloud infrastructure cutover window is locked at 2:00 PM today. We require immediate sign-off on the rollback policy to avoid downtime.",
+    receivedAt: nowStr,
+    priority: "urgent",
+    status: "unread",
+    thisMonth: true,
+  };
+
+  workspace.emails = [urgentEmail, ...(workspace.emails || [])];
+  workspace.latestEmail = urgentEmail;
+  workspace.metrics.unreadEmails = (workspace.metrics.unreadEmails || 0) + 1;
+  workspace.metrics.emailsImportant = (workspace.metrics.emailsImportant || 0) + 1;
+
+  workspace.aiRecommendation = {
+    id: `rec_${Date.now()}`,
+    title: "Urgent Authorization: Elena Rostova",
+    status: "pending_review",
+    message: "Elena Rostova requested immediate authorization for the 2:00 PM system migration rollback policy.",
+    targetService: "gmail",
+    idempotencyKey: `idemp_${id}`,
+  };
+
+  workspace.urgentCallTrigger = {
+    id,
+    type: "email_urgent_call",
+    sender: "Elena Rostova (Executive Director)",
+    subject: "CRITICAL: Urgent Authorization Needed for System Migration Window",
+    snippet: "Aditya, the cloud infrastructure cutover window is locked at 2:00 PM today. We require immediate sign-off on the rollback policy to avoid downtime.",
+    proposedAction: "Authorize 2:00 PM system migration rollback policy and reschedule conflicting sync",
+    triggerAt: Date.now(),
+    callDelaySeconds: 10,
+    status: "pending",
+    attempts: 0,
+    maxAttempts: 2,
+    idempotencyKey: `idemp_${id}`,
+  };
+
+  writeWorkspace(workspace);
+  return { success: true, workspace, urgentCallTrigger: workspace.urgentCallTrigger };
+}
+
+export function updateUrgentCallTrigger(updates: Partial<any>) {
+  const workspace = readWorkspace();
+  if (workspace.urgentCallTrigger) {
+    workspace.urgentCallTrigger = {
+      ...workspace.urgentCallTrigger,
+      ...updates,
+    };
+    writeWorkspace(workspace);
+  }
+  return { success: true, workspace };
+}

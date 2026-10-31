@@ -225,6 +225,27 @@ export async function POST(request: Request) {
       });
     }
 
+    // Handle urgent email & mobile call simulation
+    if (action === "simulate_email_call") {
+      const simulateFn = (globalThis as any).simulateUrgentEmailCall || (() => ({ workspace: readWorkspace() }));
+      const result = simulateFn();
+      return NextResponse.json({
+        success: true,
+        message: "Urgent email simulated. Mobile incoming voice call scheduled in 10s.",
+        workspace: result.workspace,
+      });
+    }
+
+    // Handle updates to urgent call trigger state (e.g., dismissed or settled from mobile app)
+    if (action === "update_call_trigger") {
+      const updateFn = (globalThis as any).updateUrgentCallTrigger || ((_data: any) => ({ workspace: readWorkspace() }));
+      const result = updateFn(body.urgentCallTrigger || {});
+      return NextResponse.json({
+        success: true,
+        workspace: result.workspace,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       workspace: readWorkspace(),

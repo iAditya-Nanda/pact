@@ -1,4 +1,10 @@
-// Voice Service: Browser Text-to-Speech (TTS) & Speech-to-Text (STT)
+// Voice Service: ElevenLabs AI Voice (TTS) & Browser Speech-to-Text (STT)
+//
+// TTS uses a Next.js server-side proxy at /api/tts which calls the ElevenLabs API.
+// The API key never leaves the server. The client receives an audio/mpeg stream
+// and plays it through the Web Audio API / HTMLAudioElement.
+//
+// STT continues to use the browser Web Speech API (no API key needed).
 
 export interface VoiceRecognitionHandlers {
   onStart?: () => void;
@@ -9,6 +15,8 @@ export interface VoiceRecognitionHandlers {
 
 let activeRecognition: any = null;
 let isAudioMuted = false;
+let currentAudio: HTMLAudioElement | null = null;
+let currentObjectUrl: string | null = null;
 
 // Initialize mute state from localStorage if available
 if (typeof window !== "undefined") {
@@ -30,7 +38,7 @@ export function setVoiceMuted(muted: boolean): void {
     try {
       localStorage.setItem("pact_voice_muted", String(muted));
       if (muted) {
-        window.speechSynthesis?.cancel();
+        stopSpeaking();
       }
     } catch {}
   }
@@ -61,132 +69,149 @@ function cleanTextForSpeech(text: string): string {
     .trim();
 }
 
-let cachedVoices: SpeechSynthesisVoice[] = [];
-
-if (typeof window !== "undefined" && "speechSynthesis" in window) {
-  const loadVoices = () => {
-    cachedVoices = window.speechSynthesis.getVoices();
-  };
-  loadVoices();
-  window.speechSynthesis.onvoiceschanged = loadVoices;
-}
-
 /**
- * Resolves the cleanest female voice in Indian English accent (en-IN).
- * Supports macOS (Lekha, Veena, Isha, Sangeeta), Google Chrome (Google Indian English),
- * and Windows/Edge (Heera, Neerja, Swara).
- */
-export function getIndianFemaleVoice(): SpeechSynthesisVoice | null {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-    return null;
-  }
-
-  const voices = cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices();
-  if (!voices || voices.length === 0) return null;
-
-  // 1. Explicit macOS / Google / Microsoft Indian Female Voices
-  const explicitIndianFemale = voices.find((v) => {
-    const name = v.name.toLowerCase();
-    const lang = (v.lang || "").toLowerCase().replace("_", "-");
-    const isIndian =
-      lang.startsWith("en-in") ||
-      lang.startsWith("hi-in") ||
-      name.includes("india") ||
-      name.includes("indian");
-
-    const isFemale =
-      name.includes("lekha") ||
-      name.includes("veena") ||
-      name.includes("isha") ||
-      name.includes("sangeeta") ||
-      name.includes("heera") ||
-      name.includes("neerja") ||
-      name.includes("swara") ||
-      name.includes("priya") ||
-      name.includes("female") ||
-      (!name.includes("rishi") && !name.includes("male") && !name.includes("man"));
-
-    return isIndian && isFemale;
-  });
-  if (explicitIndianFemale) return explicitIndianFemale;
-
-  // 2. Any en-IN voice
-  const anyIndianVoice = voices.find((v) => {
-    const lang = (v.lang || "").toLowerCase().replace("_", "-");
-    return lang.startsWith("en-in") || lang.startsWith("hi-in") || v.name.toLowerCase().includes("india");
-  });
-  if (anyIndianVoice) return anyIndianVoice;
-
-  // 3. Fallback to clean natural English female voices
-  const naturalFemale = voices.find((v) => {
-    const name = v.name.toLowerCase();
-    return (
-      (name.includes("samantha") ||
-        name.includes("victoria") ||
-        name.includes("karen") ||
-        name.includes("natural") ||
-        name.includes("female")) &&
-      v.lang.toLowerCase().startsWith("en")
-    );
-  });
-  if (naturalFemale) return naturalFemale;
-
-  return voices[0] || null;
-}
-
-/**
- * Text-to-Speech (TTS): Speaks text aloud in natural executive voice
+ * Text-to-Speech (TTS): Speaks text aloud using ElevenLabs AI voice
+ * via the server-side /api/tts proxy.
+ *
+ * Falls back to browser SpeechSynthesis if the API call fails.
  */
 export function speakText(
   text: string,
   onStart?: () => void,
   onEnd?: () => void
 ): void {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-    return;
-  }
-
-  if (isAudioMuted) {
-    return;
-  }
+  if (typeof window === "undefined") return;
+  if (isAudioMuted) return;
 
   const clean = cleanTextForSpeech(text);
   if (!clean) return;
 
+  // Stop any currently playing audio first
+  stopSpeaking();
+
+  // Call the ElevenLabs TTS proxy
+  speakWithElevenLabs(clean, onStart, onEnd);
+}
+
+/**
+ * Call the server-side ElevenLabs proxy and play the returned audio.
+ */
+async function speakWithElevenLabs(
+  text: string,
+  onStart?: () => void,
+  onEnd?: () => void
+): Promise<void> {
   try {
-    // Cancel any previous speech
-    window.speechSynthesis.cancel();
+    const response = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
 
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.rate = 1.0; // Clear executive pacing
-    utterance.pitch = 1.05; // Clean natural female pitch
-    utterance.volume = 1.0;
-    utterance.lang = "en-IN"; // Prioritize Indian English
-
-    const femaleIndianVoice = getIndianFemaleVoice();
-    if (femaleIndianVoice) {
-      utterance.voice = femaleIndianVoice;
-      utterance.lang = femaleIndianVoice.lang;
+    if (!response.ok) {
+      console.warn(`[Voice] ElevenLabs TTS returned ${response.status}, falling back to browser TTS.`);
+      speakWithBrowserTTS(text, onStart, onEnd);
+      return;
     }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    // Clean up any previous object URL
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl);
+    }
+    currentObjectUrl = url;
+
+    const audio = new Audio(url);
+    currentAudio = audio;
+
+    audio.onplay = () => {
+      if (onStart) onStart();
+    };
+
+    audio.onended = () => {
+      currentAudio = null;
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+      }
+      if (onEnd) onEnd();
+    };
+
+    audio.onerror = () => {
+      console.warn("[Voice] Audio playback error, falling back to browser TTS.");
+      currentAudio = null;
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+      }
+      speakWithBrowserTTS(text, onStart, onEnd);
+    };
+
+    await audio.play();
+  } catch (err) {
+    console.warn("[Voice] ElevenLabs TTS failed, falling back to browser TTS:", err);
+    speakWithBrowserTTS(text, onStart, onEnd);
+  }
+}
+
+/**
+ * Fallback: Browser SpeechSynthesis (used only if ElevenLabs API is unreachable)
+ */
+function speakWithBrowserTTS(
+  text: string,
+  onStart?: () => void,
+  onEnd?: () => void
+): void {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    if (onEnd) onEnd();
+    return;
+  }
+
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.05;
+    utterance.volume = 1.0;
+    utterance.lang = "en-IN";
 
     if (onStart) utterance.onstart = onStart;
     if (onEnd) utterance.onend = onEnd;
-    utterance.onerror = (e) => {
-      console.warn("Speech synthesis error:", e);
+    utterance.onerror = () => {
+      console.warn("[Voice] Browser SpeechSynthesis error");
       if (onEnd) onEnd();
     };
 
     window.speechSynthesis.speak(utterance);
   } catch (err) {
-    console.warn("Speech synthesis failed to execute:", err);
+    console.warn("[Voice] Browser SpeechSynthesis failed:", err);
     if (onEnd) onEnd();
   }
 }
 
 /**
- * Stop any current speech playback
+ * Stop any current speech playback (ElevenLabs audio or browser synthesis)
  */
 export function stopSpeaking(): void {
+  // Stop ElevenLabs audio playback
+  if (currentAudio) {
+    try {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      currentAudio.src = "";
+    } catch {}
+    currentAudio = null;
+  }
+  if (currentObjectUrl) {
+    try {
+      URL.revokeObjectURL(currentObjectUrl);
+    } catch {}
+    currentObjectUrl = null;
+  }
+
+  // Also cancel any browser speech synthesis
   if (typeof window !== "undefined" && "speechSynthesis" in window) {
     try {
       window.speechSynthesis.cancel();

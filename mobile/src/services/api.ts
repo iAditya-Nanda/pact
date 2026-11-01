@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 let cachedBaseUrl = 'http://127.0.0.1:3000';
 let cachedAgentUrl = 'http://127.0.0.1:8000';
 
-const CANDIDATE_HOSTS = ['10.0.2.2', '127.0.0.1', '10.112.54.186', 'localhost'];
+const CANDIDATE_HOSTS = ['10.0.2.2', '127.0.0.1', '172.19.178.186', '10.112.54.186', 'localhost'];
 
 export async function resolveApiHost(): Promise<string> {
   for (const host of CANDIDATE_HOSTS) {
